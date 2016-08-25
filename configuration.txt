@@ -1,11 +1,11 @@
 {
     "suspects" : [
-        "Mustard",
-        "White"  ,
-        "Plum"   ,
-        "Peacock",
-        "Green"  ,
-        "Scarlet"
+        "Colonel Mustard",
+        "Mrs. White"     ,
+        "Professor Plum" ,
+        "Mrs. Peacock"   ,
+        "Mr. Green"      ,
+        "Miss Scarlet"
     ],
     "weapons" : [ 
         "Revolver"   ,

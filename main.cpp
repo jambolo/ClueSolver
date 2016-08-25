@@ -12,22 +12,81 @@ namespace
 
 static void loadConfiguration(char const * name);
 
-std::vector<std::string> players;
-std::vector<std::string> suspects;
-std::vector<std::string> weapons;
-std::vector<std::string> rooms;
+std::vector<Solver::Name> players = { "a", "b", "c", "d" };
+    std::vector<Solver::Name> suspects =
+    {
+        "Colonel Mustard",
+        "Mrs. White"     ,
+        "Professor Plum" ,
+        "Mrs. Peacock"   ,
+        "Mr. Green"      ,
+        "Miss Scarlet"
+    };
+std::vector<Solver::Name> weapons =
+    {
+        "Revolver"   ,
+        "Knife"      ,
+        "Rope"       ,
+        "Lead pipe"  ,
+        "Wrench"     ,
+        "Candlestick"
+    };
+std::vector<Solver::Name> rooms =
+    {
+        "Dining room"  ,
+        "Conservatory" ,
+        "Kitchen"      ,
+        "Study"        ,
+        "Library"      ,
+        "Billiard room",
+        "Lounge"       ,
+        "Ballroom"     ,
+        "Hall"
+    };
 
 } // anonymous namespace
 
 int main(int argc, char ** argv)
 {
-
+    char * configurationFileName = nullptr;
+    char * inputFileName = nullptr;
+    std::ifstream infilestream;
+    std::istream *in = &std::cin;
+    
+    while (--argc > 0)
+    {
+        ++argv;
+        if (**argv == '-')
+        {
+            switch ((*argv)[1])
+            {
+                case 'c':
+                    if (--argc > 0)
+                        configurationFileName = *++argv;
+                    break;
+            }
+        }
+        else
+        {
+            if (!inputFileName)
+                inputFileName = *argv;
+        }
+    }
+    
     // Load configuration
-    loadConfiguration(*++argv);
+    if (!configurationFileName)
+        loadConfiguration(configurationFileName);
 
+    if (inputFileName)
+    {
+        infilestream.open(inputFileName);
+        if (infilestream.is_open())
+            in = &infilestream;
+    }
+    
     // Load player list
-    std::string input;
-    std::getline(std::cin, input);
+    Solver::Name input;
+    std::getline(*in, input);
     players = json::parse(input);
 
     std::cout << "players = " << json(players).dump() << std::endl;
@@ -40,7 +99,7 @@ int main(int argc, char ** argv)
     Solver::NameList answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
     while (answer.size() > 3)
     {
-        std::getline(std::cin, input);
+        std::getline(*in, input);
         json turn = json::parse(input);
         if (turn.find("reveal") != turn.end())
         {
