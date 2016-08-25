@@ -18,14 +18,17 @@ public:
            NameList const & weapons,
            NameList const & rooms);
 
+	//! Processes a player's hand
+	void hand(Name const & player, NameList const & cards);
+
     //! Processes a card being revealed by a player
     void reveal(Name const & player, Name const & card);
 
     //! Processes the result of a suggestion
-    void suggest(Name const & suspect, Name const & weapon, Name const & room, NameList const & players);
+    void suggest(Name const & player, Name const & suspect, Name const & weapon, Name const & room, NameList const & holders);
 
     //! Processes the result of a failed accusation
-    void accuse(Name const & suspect, Name const & weapon, Name const & room);
+	void accuse(Name const & suspect, Name const & weapon, Name const & room);
 
     //! Returns a list of cards that might be held by the player
     NameList mightBeHeldBy(Name const & player) const;
@@ -42,19 +45,31 @@ private:
         NameList suspects;  // List of suspects the player might be holding
         NameList weapons;   // List of weapons the player might be holding
         NameList rooms;     // List of rooms the player might be holding
-    };
+
+		void removeSuspect(Name const & card);
+		void removeWeapon(Name const & card);
+		void removeRoom(Name const & card);
+		bool hasSuspect(Name const & suspect) const;
+		bool hasWeapon(Name const & weapon) const;
+		bool hasRoom(Name const & room) const;
+	};
 
     struct Card
     {
-        NameList players;   // List of players that might be holding this card
-    };
+        NameList holders;   // List of players that might be holding this card
+
+		void assignHolder(Name const & player);
+		void removeHolder(Name const & player);
+		bool isHeldBy(Name const & player) const;
+	};
 
     struct Suggestion
     {
+		Name     player;
         Name     suspect;
         Name     weapon;
         Name     room;
-        NameList players;   // Players that showed a card
+        NameList holders;   // Players that showed a card
     };
 
     using PlayerList     = std::map<Name, Player>;
@@ -64,11 +79,24 @@ private:
     bool revealSuspect(Name const & player, Name const & card);
     bool revealWeapon(Name const & player, Name const & card);
     bool revealRoom(Name const & player, Name const & card);
-    bool apply(Suggestion const & suggestion);
+
+	bool apply(Suggestion const & suggestion);
     void reapplySuggestions();
-    bool disassociateSuspect(Player & player, Name const & suspect);
-    bool disassociateWeapon(Player & player, Name const & weapon);
-    bool disassociateRoom(Player & player, Name const & room);
+
+	bool disassociatePlayerAndSuspect(Name const & playerName, Name const & suspect);
+
+	void hasSuspect(Player &player, Name const & suspect);
+
+	bool disassociatePlayerAndWeapon(Name const & playerName, Name const & weapon);
+    bool disassociatePlayerAndRoom(Name const & playerName, Name const & room);
+
+	bool isSuspect(Name const & card) const;
+	bool isWeapon(Name const & card) const;
+	bool isRoom(Name const & card) const;
+
+	void nobodyElseHoldsThisSuspect(Player & player, Name const & suspect);
+	void nobodyElseHoldsThisWeapon(Player & player, Name const & weapon);
+	void nobodyElseHoldsThisRoom(Player & player, Name const & room);
 
     PlayerList players_;
     CardList suspects_;

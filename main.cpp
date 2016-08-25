@@ -12,47 +12,47 @@ namespace
 
 static void loadConfiguration(char const * name);
 
-std::vector<Solver::Name> players = { "a", "b", "c", "d" };
-    std::vector<Solver::Name> suspects =
-    {
-        "Colonel Mustard",
-        "Mrs. White"     ,
-        "Professor Plum" ,
-        "Mrs. Peacock"   ,
-        "Mr. Green"      ,
-        "Miss Scarlet"
-    };
+std::vector<Solver::Name> players  = { "a", "b", "c", "d" };
+std::vector<Solver::Name> suspects =
+{
+    "Colonel Mustard",
+    "Mrs. White",
+    "Professor Plum",
+    "Mrs. Peacock",
+    "Mr. Green",
+    "Miss Scarlet"
+};
 std::vector<Solver::Name> weapons =
-    {
-        "Revolver"   ,
-        "Knife"      ,
-        "Rope"       ,
-        "Lead pipe"  ,
-        "Wrench"     ,
-        "Candlestick"
-    };
+{
+    "Revolver",
+    "Knife",
+    "Rope",
+    "Lead pipe",
+    "Wrench",
+    "Candlestick"
+};
 std::vector<Solver::Name> rooms =
-    {
-        "Dining room"  ,
-        "Conservatory" ,
-        "Kitchen"      ,
-        "Study"        ,
-        "Library"      ,
-        "Billiard room",
-        "Lounge"       ,
-        "Ballroom"     ,
-        "Hall"
-    };
+{
+    "Dining room",
+    "Conservatory",
+    "Kitchen",
+    "Study",
+    "Library",
+    "Billiard room",
+    "Lounge",
+    "Ballroom",
+    "Hall"
+};
 
 } // anonymous namespace
 
 int main(int argc, char ** argv)
 {
     char * configurationFileName = nullptr;
-    char * inputFileName = nullptr;
+    char * inputFileName         = nullptr;
     std::ifstream infilestream;
-    std::istream *in = &std::cin;
-    
+    std::istream * in = &std::cin;
+
     while (--argc > 0)
     {
         ++argv;
@@ -72,9 +72,9 @@ int main(int argc, char ** argv)
                 inputFileName = *argv;
         }
     }
-    
+
     // Load configuration
-    if (!configurationFileName)
+    if (configurationFileName)
         loadConfiguration(configurationFileName);
 
     if (inputFileName)
@@ -83,7 +83,7 @@ int main(int argc, char ** argv)
         if (infilestream.is_open())
             in = &infilestream;
     }
-    
+
     // Load player list
     Solver::Name input;
     std::getline(*in, input);
@@ -109,21 +109,46 @@ int main(int argc, char ** argv)
         else if (turn.find("suggest") != turn.end())
         {
             auto s = turn["suggest"];
-            solver.suggest(s["suspect"], s["weapon"], s["room"], s["players"]);
+            solver.suggest(s["player"], s["suspect"], s["weapon"], s["room"], s["holders"]);
         }
-        else if (turn.find("accuse") != turn.end())
-        {
-            auto a = turn["accuse"];
-            solver.accuse(a["suspect"], a["weapon"], a["room"]);
-        }
+		else if (turn.find("accuse") != turn.end())
+		{
+			auto a = turn["accuse"];
+			solver.accuse(a["suspect"], a["weapon"], a["room"]);
+		}
+		else if (turn.find("hand") != turn.end())
+		{
+			auto a = turn["hand"];
+			solver.hand(a["player"], a["cards"]);
+		}
 
-        answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
+		{
+			for (auto const & s : suspects)
+			{
+				Solver::NameList holders = solver.mightHold(s);
+				std::cout << s << " " << (holders.size() > 1 ? "might be" : "is") << " held by " << json(holders).dump() << std::endl;
+			}
 
-        for (auto const & p : players)
-        {
-            std::cout << json(solver.mightBeHeldBy(p)).dump() << std::endl;
-        }
-        std::cout << "Answer = " << json(answer).dump() << std::endl << std::endl;
+			for (auto const & w : weapons)
+			{
+				Solver::NameList holders = solver.mightHold(w);
+				std::cout << w << " " << (holders.size() > 1 ? "might be" : "is") << " held by " << json(holders).dump() << std::endl;
+			}
+
+			for (auto const & r : rooms)
+			{
+				Solver::NameList holders = solver.mightHold(r);
+				std::cout << r << " " << (holders.size() > 1 ? "might be" : "is") << " held by " << json(holders).dump() << std::endl;
+			}
+
+			for (auto const & p : players)
+			{
+				std::cout << p << " " << "might be" << " holding " << json(solver.mightBeHeldBy(p)).dump() << std::endl;
+			}
+		}
+
+		answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
+		std::cout << "Answer " << (answer.size() > 3 ? "might be" : "is") << " " << json(answer).dump() << std::endl << std::endl;
     }
     return 0;
 }

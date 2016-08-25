@@ -1,29 +1,38 @@
 {
     "suspects" : [
-        "Colonel Mustard",
-        "Mrs. White"     ,
-        "Professor Plum" ,
-        "Mrs. Peacock"   ,
-        "Mr. Green"      ,
-        "Miss Scarlet"
+        "mustard",
+        "white"     ,
+        "plum" ,
+        "peacock"   ,
+        "green"      ,
+        "scarlet",
+		"rose",
+		"gray",
+		"brunette",
+		"peach"
     ],
     "weapons" : [ 
-        "Revolver"   ,
-        "Knife"      ,
-        "Rope"       ,
-        "Lead pipe"  ,
-        "Wrench"     ,
-        "Candlestick"
+        "revolver"   ,
+        "knife"      ,
+        "rope"       ,
+        "pipe"  ,
+        "wrench"     ,
+        "candlestick",
+		"poison",
+		"horseshoe"
     ],
     "rooms" : [
-        "Dining room"  ,
-        "Conservatory" ,
-        "Kitchen"      ,
-        "Study"        ,
-        "Library"      ,
-        "Billiard room",
-        "Lounge"       ,
-        "Ballroom"     ,
-        "Hall"         
+        "dining"  ,
+        "conservatory" ,
+        "kitchen"      ,
+        "studio"        ,
+        "library"      ,
+        "billiard",
+		"courtyard",
+		"gazebo",
+		"drawing",
+		"carriage",
+		"trophy",
+		"fountain"
     ]
 }
