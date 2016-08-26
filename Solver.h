@@ -23,7 +23,7 @@ public:
     void hand(Name const & player, NameList const & cards);
 
     //! Processes a card being revealed by a player
-    void reveal(Name const & player, Name const & card);
+    void show(Name const & player, Name const & card);
 
     //! Processes the result of a suggestion
     void suggest(Name const & player, NameList const & cards, NameList const & holders);

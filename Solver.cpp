@@ -88,7 +88,7 @@ void Solver::hand(Name const & name, NameList const & cards)
     }
 }
 
-void Solver::reveal(Name const & player, Name const & card)
+void Solver::show(Name const & player, Name const & card)
 {
     bool changed = false;
     if (isSuspect(card))

@@ -100,33 +100,33 @@ int main(int argc, char ** argv)
     while (true)
     {
         std::getline(*in, input);
-		if (in->eof())
-			break;
+        if (in->eof())
+            break;
 
         json turn = json::parse(input);
 
         if (turn.find("reveal") != turn.end())
         {
-			std::cout << "---- " << input << std::endl;
-			auto r = turn["reveal"];
-            solver.reveal(r["player"], r["card"]);
+            std::cout << "---- " << input << std::endl;
+            auto r = turn["show"];
+            solver.show(r["player"], r["card"]);
         }
         else if (turn.find("suggest") != turn.end())
         {
-			std::cout << '(' << std::setw(2) << index++ << ") " << input << std::endl;
-			auto s = turn["suggest"];
+            std::cout << '(' << std::setw(2) << index++ << ") " << input << std::endl;
+            auto s = turn["suggest"];
             solver.suggest(s["player"], s["cards"], s["holders"]);
         }
         else if (turn.find("accuse") != turn.end())
         {
-			std::cout << "!!!! " << input << std::endl;
-			auto a = turn["accuse"];
+            std::cout << "!!!! " << input << std::endl;
+            auto a = turn["accuse"];
             solver.accuse(a["suspect"], a["weapon"], a["room"]);
         }
         else if (turn.find("hand") != turn.end())
         {
-			std::cout << "**** " << input << std::endl;
-			auto a = turn["hand"];
+            std::cout << "**** " << input << std::endl;
+            auto a = turn["hand"];
             solver.hand(a["player"], a["cards"]);
         }
 
