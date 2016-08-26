@@ -2,8 +2,8 @@
 
 #include "json.hpp"
 
-#include <cstdio>
 #include <fstream>
+#include <iomanip>
 
 using json = nlohmann::json;
 
@@ -94,61 +94,69 @@ int main(int argc, char ** argv)
     std::cout << "weapons = " << json(weapons).dump() << std::endl;
     std::cout << "rooms = " << json(rooms).dump() << std::endl;
 
+    int index = 0;
     Solver solver(players, suspects, weapons, rooms);
-
-    Solver::NameList answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
-    while (answer.size() > 3)
+    Solver::SortedNameList answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
+    while (true)
     {
         std::getline(*in, input);
+		if (in->eof())
+			break;
+
         json turn = json::parse(input);
+
         if (turn.find("reveal") != turn.end())
         {
-            auto r = turn["reveal"];
+			std::cout << "---- " << input << std::endl;
+			auto r = turn["reveal"];
             solver.reveal(r["player"], r["card"]);
         }
         else if (turn.find("suggest") != turn.end())
         {
-            auto s = turn["suggest"];
-            solver.suggest(s["player"], s["suspect"], s["weapon"], s["room"], s["holders"]);
+			std::cout << '(' << std::setw(2) << index++ << ") " << input << std::endl;
+			auto s = turn["suggest"];
+            solver.suggest(s["player"], s["cards"], s["holders"]);
         }
-		else if (turn.find("accuse") != turn.end())
-		{
+        else if (turn.find("accuse") != turn.end())
+        {
+			std::cout << "!!!! " << input << std::endl;
 			auto a = turn["accuse"];
-			solver.accuse(a["suspect"], a["weapon"], a["room"]);
-		}
-		else if (turn.find("hand") != turn.end())
-		{
+            solver.accuse(a["suspect"], a["weapon"], a["room"]);
+        }
+        else if (turn.find("hand") != turn.end())
+        {
+			std::cout << "**** " << input << std::endl;
 			auto a = turn["hand"];
-			solver.hand(a["player"], a["cards"]);
-		}
+            solver.hand(a["player"], a["cards"]);
+        }
 
-		{
-			for (auto const & s : suspects)
-			{
-				Solver::NameList holders = solver.mightHold(s);
-				std::cout << s << " " << (holders.size() > 1 ? "might be" : "is") << " held by " << json(holders).dump() << std::endl;
-			}
+        {
+            for (auto const & s : suspects)
+            {
+                Solver::NameList holders = solver.mightHold(s);
+                std::cout << s << " is held by " << json(holders).dump() << std::endl;
+            }
 
-			for (auto const & w : weapons)
-			{
-				Solver::NameList holders = solver.mightHold(w);
-				std::cout << w << " " << (holders.size() > 1 ? "might be" : "is") << " held by " << json(holders).dump() << std::endl;
-			}
+            for (auto const & w : weapons)
+            {
+                Solver::NameList holders = solver.mightHold(w);
+                std::cout << w << " is held by " << json(holders).dump() << std::endl;
+            }
 
-			for (auto const & r : rooms)
-			{
-				Solver::NameList holders = solver.mightHold(r);
-				std::cout << r << " " << (holders.size() > 1 ? "might be" : "is") << " held by " << json(holders).dump() << std::endl;
-			}
+            for (auto const & r : rooms)
+            {
+                Solver::NameList holders = solver.mightHold(r);
+                std::cout << r << " is held by " << json(holders).dump() << std::endl;
+            }
 
-			for (auto const & p : players)
-			{
-				std::cout << p << " " << "might be" << " holding " << json(solver.mightBeHeldBy(p)).dump() << std::endl;
-			}
-		}
+            for (auto const & p : players)
+            {
+                std::cout << p << " is holding " << json(solver.mightBeHeldBy(p)).dump() << std::endl;
+            }
+        }
 
-		answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
-		std::cout << "Answer " << (answer.size() > 3 ? "might be" : "is") << " " << json(answer).dump() << std::endl << std::endl;
+        answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
+        std::cout << "Answer is " << json(answer).dump() << std::endl << std::endl;
     }
     return 0;
 }
