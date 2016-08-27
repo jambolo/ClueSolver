@@ -1,6 +1,6 @@
 #include "Solver.h"
 
-#include "json.hpp"
+#include <json.hpp>
 
 #include <fstream>
 #include <iomanip>
@@ -9,7 +9,6 @@ using json = nlohmann::json;
 
 namespace
 {
-
 static void loadConfiguration(char const * name);
 
 std::vector<Solver::Name> players  = { "a", "b", "c", "d" };
@@ -43,7 +42,6 @@ std::vector<Solver::Name> rooms =
     "Ballroom",
     "Hall"
 };
-
 } // anonymous namespace
 
 int main(int argc, char ** argv)
@@ -96,7 +94,6 @@ int main(int argc, char ** argv)
 
     int index = 0;
     Solver solver(players, suspects, weapons, rooms);
-    Solver::SortedNameList answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
     while (true)
     {
         std::getline(*in, input);
@@ -105,7 +102,7 @@ int main(int argc, char ** argv)
 
         json turn = json::parse(input);
 
-        if (turn.find("reveal") != turn.end())
+        if (turn.find("show") != turn.end())
         {
             std::cout << "---- " << input << std::endl;
             auto r = turn["show"];
@@ -129,41 +126,18 @@ int main(int argc, char ** argv)
             auto a = turn["hand"];
             solver.hand(a["player"], a["cards"]);
         }
-
+        else
         {
-            for (auto const & s : suspects)
-            {
-                Solver::NameList holders = solver.mightHold(s);
-                std::cout << s << " is held by " << json(holders).dump() << std::endl;
-            }
-
-            for (auto const & w : weapons)
-            {
-                Solver::NameList holders = solver.mightHold(w);
-                std::cout << w << " is held by " << json(holders).dump() << std::endl;
-            }
-
-            for (auto const & r : rooms)
-            {
-                Solver::NameList holders = solver.mightHold(r);
-                std::cout << r << " is held by " << json(holders).dump() << std::endl;
-            }
-
-            for (auto const & p : players)
-            {
-                std::cout << p << " is holding " << json(solver.mightBeHeldBy(p)).dump() << std::endl;
-            }
+            assert(false);
         }
 
-        answer = solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME);
-        std::cout << "Answer is " << json(answer).dump() << std::endl << std::endl;
+        std::cout << "state = " << solver.toJson().dump() << std::endl;
     }
     return 0;
 }
 
 namespace
 {
-
 void loadConfiguration(char const * name)
 {
     std::ifstream file(name);
@@ -176,5 +150,4 @@ void loadConfiguration(char const * name)
     weapons  = j["weapons"];
     rooms    = j["rooms"];
 }
-
 } // anonymous namespace

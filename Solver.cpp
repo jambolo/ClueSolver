@@ -1,6 +1,35 @@
 #include "Solver.h"
 
+#include <json.hpp>
+
 #include <algorithm>
+
+using json = nlohmann::json;
+
+namespace
+{
+template <typename T>
+json toJson(std::map<std::string, T> const & m)
+{
+    json j;
+    for (auto const & e : m)
+    {
+        j[e.first] = e.second.toJson();
+    }
+    return j;
+}
+
+template <typename T>
+json toJson(std::vector<T> const & v)
+{
+    json j = json::array();
+    for (auto const & e : v)
+    {
+        j.push_back(e.toJson());
+    }
+    return j;
+}
+} // anonymous namespace
 
 char const * const Solver::ANSWER_PLAYER_NAME = "ANSWER";
 
@@ -438,6 +467,17 @@ void Solver::answerHasOnlyOneOfEach(bool & changed)
     }
 }
 
+json Solver::toJson() const
+{
+    json j;
+    j["suspects"]    = ::toJson(suspects_);
+    j["weapons"]     = ::toJson(weapons_);
+    j["rooms"]       = ::toJson(rooms_);
+    j["players"]     = ::toJson(players_);
+    j["suggestions"] = ::toJson(suggestions_);
+    return j;
+}
+
 void Solver::Card::assignHolder(Name const & player)
 {
     holders.clear();
@@ -452,6 +492,13 @@ void Solver::Card::removeHolder(Name const & player)
 bool Solver::Card::mightBeHeldBy(Name const & player) const
 {
     return std::find(holders.begin(), holders.end(), player) != holders.end();
+}
+
+json Solver::Card::toJson() const
+{
+    json j;
+    j["holders"] = holders;
+    return j;
 }
 
 void Solver::Player::removeSuspect(Name const & card)
@@ -482,4 +529,24 @@ bool Solver::Player::mightHaveWeapon(Name const & weapon) const
 bool Solver::Player::mightHaveRoom(Name const & room) const
 {
     return std::find(rooms.begin(), rooms.end(), room) != rooms.end();
+}
+
+json Solver::Player::toJson() const
+{
+    json j;
+    j["suspects"] = suspects;
+    j["weapons"]  = weapons;
+    j["rooms"]    = rooms;
+    return j;
+}
+
+json Solver::Suggestion::toJson() const
+{
+    json j;
+    j["player"]  = player;
+    j["suspect"] = suspect;
+    j["weapon"]  = weapon;
+    j["room"]    = room;
+    j["holders"] = holders;
+    return j;
 }

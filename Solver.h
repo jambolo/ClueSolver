@@ -2,6 +2,7 @@
 #if !defined(SOLVER_H)
 #define SOLVER_H 1
 
+#include <json.hpp>
 #include <map>
 #include <string>
 #include <vector>
@@ -37,42 +38,45 @@ public:
     //! Returns a list of players that might hold the card
     NameList mightHold(Name const & card) const;
 
-    // Player name of the answer
-    static char const * const ANSWER_PLAYER_NAME;
+    //! Store the state of the solver in a json object
+    nlohmann::json toJson() const;
+
+    static char const * const ANSWER_PLAYER_NAME;   //<! Player name of the answer
 
 private:
     struct Player
     {
-        NameList suspects;  // List of suspects the player might be holding
-        NameList weapons;   // List of weapons the player might be holding
-        NameList rooms;     // List of rooms the player might be holding
+        NameList       suspects; // List of suspects the player might be holding
+        NameList       weapons; // List of weapons the player might be holding
+        NameList       rooms; // List of rooms the player might be holding
 
-        void     removeSuspect(Name const & card);
-        void     removeWeapon(Name const & card);
-        void     removeRoom(Name const & card);
-        bool     mightHaveSuspect(Name const & suspect) const;
-        bool     mightHaveWeapon(Name const & weapon) const;
-        bool     mightHaveRoom(Name const & room) const;
-
+        void           removeSuspect(Name const & card);
+        void           removeWeapon(Name const & card);
+        void           removeRoom(Name const & card);
+        bool           mightHaveSuspect(Name const & suspect) const;
+        bool           mightHaveWeapon(Name const & weapon) const;
+        bool           mightHaveRoom(Name const & room) const;
+        nlohmann::json toJson() const;
     };
 
     struct Card
     {
-        NameList holders;   // List of players that might be holding this card
+        NameList       holders; // List of players that might be holding this card
 
-        void     assignHolder(Name const & player);
-        void     removeHolder(Name const & player);
-        bool     mightBeHeldBy(Name const & player) const;
-
+        void           assignHolder(Name const & player);
+        void           removeHolder(Name const & player);
+        bool           mightBeHeldBy(Name const & player) const;
+        nlohmann::json toJson() const;
     };
 
     struct Suggestion
     {
-        Name     player;
-        Name     suspect;
-        Name     weapon;
-        Name     room;
-        NameList holders;   // Players that showed a card
+        Name           player;
+        Name           suspect;
+        Name           weapon;
+        Name           room;
+        NameList       holders; // Players that showed a card
+        nlohmann::json toJson() const;
     };
 
     using PlayerList     = std::map<Name, Player>;
