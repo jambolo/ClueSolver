@@ -1,4 +1,5 @@
 {
+    "rules : "master",
     "suspects" : [
         "mustard",
         "white"     ,
@@ -6,10 +7,10 @@
         "peacock"   ,
         "green"      ,
         "scarlet",
-		"rose",
-		"gray",
-		"brunette",
-		"peach"
+        "rose",
+        "gray",
+        "brunette",
+        "peach"
     ],
     "weapons" : [ 
         "revolver"   ,
@@ -18,8 +19,8 @@
         "pipe"  ,
         "wrench"     ,
         "candlestick",
-		"poison",
-		"horseshoe"
+        "poison",
+        "horseshoe"
     ],
     "rooms" : [
         "dining"  ,
@@ -28,11 +29,11 @@
         "studio"        ,
         "library"      ,
         "billiard",
-		"courtyard",
-		"gazebo",
-		"drawing",
-		"carriage",
-		"trophy",
-		"fountain"
+        "courtyard",
+        "gazebo",
+        "drawing",
+        "carriage",
+        "trophy",
+        "fountain"
     ]
 }

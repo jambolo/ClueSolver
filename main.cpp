@@ -11,6 +11,7 @@ namespace
 {
 static void loadConfiguration(char const * name);
 
+std::string rules = "classic";
 std::vector<Solver::Name> players  = { "a", "b", "c", "d" };
 std::vector<Solver::Name> suspects =
 {
@@ -87,13 +88,14 @@ int main(int argc, char ** argv)
     std::getline(*in, input);
     players = json::parse(input);
 
+    std::cout << "rules = " << rules << std::endl;
     std::cout << "players = " << json(players).dump() << std::endl;
     std::cout << "suspects = " << json(suspects).dump() << std::endl;
     std::cout << "weapons = " << json(weapons).dump() << std::endl;
     std::cout << "rooms = " << json(rooms).dump() << std::endl;
 
-    int index = 0;
-    Solver solver(players, suspects, weapons, rooms);
+    int suggestionId = 0;
+    Solver solver(rules, players, suspects, weapons, rooms);
     while (true)
     {
         std::getline(*in, input);
@@ -110,9 +112,10 @@ int main(int argc, char ** argv)
         }
         else if (turn.find("suggest") != turn.end())
         {
-            std::cout << '(' << std::setw(2) << index++ << ") " << input << std::endl;
+            std::cout << '(' << std::setw(2) << suggestionId << ") " << input << std::endl;
             auto s = turn["suggest"];
-            solver.suggest(s["player"], s["cards"], s["holders"]);
+            solver.suggest(s["player"], s["cards"], s["showed"], suggestionId);
+            ++suggestionId;
         }
         else if (turn.find("accuse") != turn.end())
         {
@@ -131,7 +134,17 @@ int main(int argc, char ** argv)
             assert(false);
         }
 
-        std::cout << "state = " << solver.toJson().dump() << std::endl;
+        {
+            std::vector<std::string> discoveries = solver.discoveries();
+            for (auto const & d : discoveries)
+            {
+                std::cout << d << std::endl;
+            }
+        }
+
+		//        std::cout << "state = " << solver.toJson().dump() << std::endl;
+		std::cout << "ANSWER: " << json(solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME)).dump() << std::endl;
+        std::cout << std::endl;
     }
     return 0;
 }
@@ -146,8 +159,13 @@ void loadConfiguration(char const * name)
 
     json j;
     file >> j;
-    suspects = j["suspects"];
-    weapons  = j["weapons"];
-    rooms    = j["rooms"];
+    if (j.find("rules") != j.end())
+        rules = j["rules"];
+    if (j.find("suspects") != j.end())
+        suspects = j["suspects"];
+    if (j.find("weapons") != j.end())
+        weapons = j["weapons"];
+    if (j.find("rooms") != j.end())
+        rooms = j["rooms"];
 }
 } // anonymous namespace
