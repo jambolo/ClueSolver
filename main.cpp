@@ -53,7 +53,7 @@ int main(int argc, char ** argv)
     std::ifstream infilestream;
     std::ofstream outfilestream;
     std::istream * in = &std::cin;
-    std::ostream * out = &*out;
+    std::ostream * out = &std::cout;
 
     while (--argc > 0)
     {
@@ -97,16 +97,18 @@ int main(int argc, char ** argv)
             out = &outfilestream;
     }
 
+    *out << "rules = " << rules << std::endl;
+    *out << "suspects = " << json(suspects).dump() << std::endl;
+    *out << "weapons = " << json(weapons).dump() << std::endl;
+    *out << "rooms = " << json(rooms).dump() << std::endl;
+    *out << std::endl;
+
     // Load player list
     Solver::Name input;
     std::getline(*in, input);
     players = json::parse(input);
 
-    *out << "rules = " << rules << std::endl;
     *out << "players = " << json(players).dump() << std::endl;
-    *out << "suspects = " << json(suspects).dump() << std::endl;
-    *out << "weapons = " << json(weapons).dump() << std::endl;
-    *out << "rooms = " << json(rooms).dump() << std::endl;
     *out << std::endl;
 
     int suggestionId = 0;
