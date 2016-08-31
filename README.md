@@ -45,7 +45,7 @@ listed.
 ##### Classic Rules
 If Classic rules are used, then only one card is shown. The players that did or did not have a card are listed, but the last player
 is the player that showed a card.
-##### show
+#### show
 One or more **show** events may occur after a **suggest** event if any cards are shown to you. The event value is an object containing
 a `player` element describing the player that showed the card and a `card` element describing the card that was shown. For example,
 ```javascript

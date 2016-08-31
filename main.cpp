@@ -12,7 +12,7 @@ namespace
 static void loadConfiguration(char const * name);
 
 std::string rules = "classic";
-std::vector<Solver::Name> players  = { "a", "b", "c", "d" };
+std::vector<Solver::Name> players;
 std::vector<Solver::Name> suspects =
 {
     "Colonel Mustard",
@@ -49,8 +49,11 @@ int main(int argc, char ** argv)
 {
     char * configurationFileName = nullptr;
     char * inputFileName         = nullptr;
+    char * outputFileName        = nullptr;
     std::ifstream infilestream;
+    std::ofstream outfilestream;
     std::istream * in = &std::cin;
+    std::ostream * out = &*out;
 
     while (--argc > 0)
     {
@@ -62,6 +65,10 @@ int main(int argc, char ** argv)
                 case 'c':
                     if (--argc > 0)
                         configurationFileName = *++argv;
+                    break;
+                case 'o':
+                    if (--argc > 0)
+                        outputFileName = *++argv;
                     break;
             }
         }
@@ -83,16 +90,24 @@ int main(int argc, char ** argv)
             in = &infilestream;
     }
 
+    if (outputFileName)
+    {
+        outfilestream.open(outputFileName);
+        if (outfilestream.is_open())
+            out = &outfilestream;
+    }
+
     // Load player list
     Solver::Name input;
     std::getline(*in, input);
     players = json::parse(input);
 
-    std::cout << "rules = " << rules << std::endl;
-    std::cout << "players = " << json(players).dump() << std::endl;
-    std::cout << "suspects = " << json(suspects).dump() << std::endl;
-    std::cout << "weapons = " << json(weapons).dump() << std::endl;
-    std::cout << "rooms = " << json(rooms).dump() << std::endl;
+    *out << "rules = " << rules << std::endl;
+    *out << "players = " << json(players).dump() << std::endl;
+    *out << "suspects = " << json(suspects).dump() << std::endl;
+    *out << "weapons = " << json(weapons).dump() << std::endl;
+    *out << "rooms = " << json(rooms).dump() << std::endl;
+    *out << std::endl;
 
     int suggestionId = 0;
     Solver solver(rules, players, suspects, weapons, rooms);
@@ -106,26 +121,26 @@ int main(int argc, char ** argv)
 
         if (turn.find("show") != turn.end())
         {
-            std::cout << "---- " << input << std::endl;
+            *out << "---- " << input << std::endl;
             auto r = turn["show"];
             solver.show(r["player"], r["card"]);
         }
         else if (turn.find("suggest") != turn.end())
         {
-            std::cout << '(' << std::setw(2) << suggestionId << ") " << input << std::endl;
+            *out << '(' << std::setw(2) << suggestionId << ") " << input << std::endl;
             auto s = turn["suggest"];
             solver.suggest(s["player"], s["cards"], s["showed"], suggestionId);
             ++suggestionId;
         }
         else if (turn.find("accuse") != turn.end())
         {
-            std::cout << "!!!! " << input << std::endl;
+            *out << "!!!! " << input << std::endl;
             auto a = turn["accuse"];
             solver.accuse(a["suspect"], a["weapon"], a["room"]);
         }
         else if (turn.find("hand") != turn.end())
         {
-            std::cout << "**** " << input << std::endl;
+            *out << "**** " << input << std::endl;
             auto a = turn["hand"];
             solver.hand(a["player"], a["cards"]);
         }
@@ -138,13 +153,13 @@ int main(int argc, char ** argv)
             std::vector<std::string> discoveries = solver.discoveries();
             for (auto const & d : discoveries)
             {
-                std::cout << d << std::endl;
+                *out << d << std::endl;
             }
         }
 
-		//        std::cout << "state = " << solver.toJson().dump() << std::endl;
-		std::cout << "ANSWER: " << json(solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME)).dump() << std::endl;
-        std::cout << std::endl;
+//        *out << "state = " << solver.toJson().dump() << std::endl;
+        *out << "ANSWER: " << json(solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME)).dump() << std::endl;
+        *out << std::endl;
     }
     return 0;
 }
