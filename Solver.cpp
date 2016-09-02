@@ -31,632 +31,396 @@ json toJson(std::vector<T> const & v)
 }
 } // anonymous namespace
 
-char const * const Solver::ANSWER_PLAYER_NAME = "ANSWER";
+char const * const Solver::ANSWER_PLAYER_ID = "ANSWER";
 
-Solver::Solver(std::string const & rules,
-	NameList const & players,
-               NameList const & suspects,
-               NameList const & weapons,
-               NameList const & rooms)
-	: rules_(rules)
+Solver::Solver(Rules const & rules, IdList const & playerIds)
+	: rulesId_(rules.id)
 {
-	assert(rules == "classic" || rules == "master");
+	assert(rules.id == "classic" || rules.id == "master");
 
-    for (auto const & p : players)
+    std::vector<Id> cardIds;
+
+    cardIds.reserve(rules.cards.size());
+    for (auto const & c : rules.cards)
     {
+        Id id = c.first;
+        cardIds.push_back(id);
+        cards_[id].holders = playerIds;
+        cards_[id].holders.push_back(ANSWER_PLAYER_ID);
+    }
+
+    for (auto const & p : playerIds)
+    {
+        assert(p != ANSWER_PLAYER_ID);
         Player & player = players_[p];
-        player.suspects = suspects;
-        player.weapons  = weapons;
-        player.rooms    = rooms;
+        player.cards = cardIds;
     }
-
-    players_[ANSWER_PLAYER_NAME].suspects = suspects;
-    players_[ANSWER_PLAYER_NAME].weapons  = weapons;
-    players_[ANSWER_PLAYER_NAME].rooms    = rooms;
-
-    for (auto const & s : suspects)
-    {
-        suspects_[s].holders = players;
-        suspects_[s].holders.push_back(ANSWER_PLAYER_NAME);
-    }
-
-    for (auto const & w : weapons)
-    {
-        weapons_[w].holders = players;
-        weapons_[w].holders.push_back(ANSWER_PLAYER_NAME);
-    }
-
-    for (auto const & r : rooms)
-    {
-        rooms_[r].holders = players;
-        rooms_[r].holders.push_back(ANSWER_PLAYER_NAME);
-    }
+    players_[ANSWER_PLAYER_ID].cards = cardIds;
 }
 
-void Solver::hand(Name const & name, NameList const & cards)
+void Solver::hand(Id const & playerId, IdList const & cardsIds)
 {
     discoveriesLog_.clear();
     bool changed    = false;
-    Player & player = players_[name];
 
-    for (auto & s : suspects_)
-    {
-        if (std::find(cards.begin(), cards.end(), s.first) != cards.end())
-        {
-            addDiscovery(name, s.first, "hand", true);
-            revealSuspect(name, s.first, changed);
-        }
-        else
-        {
-            addDiscovery(name, s.first, "hand", false);
-            disassociatePlayerAndSuspect(name, s.first, changed);
-        }
-    }
-
-    for (auto & w : weapons_)
-    {
-        if (std::find(cards.begin(), cards.end(), w.first) != cards.end())
-        {
-            addDiscovery(name, w.first, "hand", true);
-            revealWeapon(name, w.first, changed);
-        }
-        else
-        {
-            addDiscovery(name, w.first, "hand", false);
-            disassociatePlayerAndWeapon(name, w.first, changed);
-        }
-    }
-
-    for (auto & r : rooms_)
-    {
-        if (std::find(cards.begin(), cards.end(), r.first) != cards.end())
-        {
-            addDiscovery(name, r.first, "hand", true);
-            revealRoom(name, r.first, changed);
-        }
-        else
-        {
-            addDiscovery(name, r.first, "hand", false);
-            disassociatePlayerAndRoom(name, r.first, changed);
-        }
-    }
-	checkWhoMustHoldWhichCards();
+    deduce(playerId, cardsIds, changed);
+    makeOtherDeductions(changed);
 }
 
-void Solver::show(Name const & player, Name const & card)
+void Solver::show(Id const & playerId, Id const & cardId)
 {
     discoveriesLog_.clear();
-
     bool changed = false;
-    if (isSuspect(card))
-    {
-        addDiscovery(player, card, "revealed", true);
-        revealSuspect(player, card, changed);
-    }
-    else if (isWeapon(card))
-    {
-        addDiscovery(player, card, "revealed", true);
-        revealWeapon(player, card, changed);
-    }
-    else
-    {
-        assert(isRoom(card));
-        addDiscovery(player, card, "revealed", true);
-        revealRoom(player, card, changed);
-    }
-
-    recordThatAnswerCanHoldOnlyOneOfEach(changed);
-
-    // If something changed, then re-apply all the suggestions
-    while (changed)
-    {
-        changed = false;
-        reapplySuggestions(changed);
-        recordThatAnswerCanHoldOnlyOneOfEach(changed);
-    }
-	checkWhoMustHoldWhichCards();
+    deduce(playerId, cardId, changed);
+    makeOtherDeductions(changed);
 }
 
-void Solver::suggest(Name const & player, NameList const & cards, NameList const & showed, int id)
+void Solver::suggest(Id const & playerId, IdList const & cardIds, IdList const & showed, int id)
 {
     discoveriesLog_.clear();
-
     bool changed = false;
 
-    Suggestion suggestion;
-    suggestion.id     = id;
-    suggestion.player = player;
-    for (auto const & c : cards)
-    {
-        if (isSuspect(c))
-        {
-            suggestion.suspect = c;
-        }
-        else if (isWeapon(c))
-        {
-            suggestion.weapon = c;
-        }
-        else
-        {
-            assert(isRoom(c));
-            suggestion.room = c;
-        }
-    }
-    suggestion.showed = showed;
-
-    // Apply the suggestion
-    apply(suggestion, changed);
-
-    // Remember the suggestion
+    Suggestion suggestion = { id, playerId, cardIds, showed };
     suggestions_.push_back(suggestion);
 
-	recordThatAnswerCanHoldOnlyOneOfEach(changed);
-
-    // While anything has changed, then re-apply all the suggestions
-    while (changed)
-    {
-        changed = false;
-        reapplySuggestions(changed);
-		recordThatAnswerCanHoldOnlyOneOfEach(changed);
-    }
-	checkWhoMustHoldWhichCards();
+    deduce(suggestion, changed);
+    makeOtherDeductions(changed);
 }
 
-void Solver::accuse(Name const & suspect, Name const & weapon, Name const & room)
+Solver::IdList Solver::mightBeHeldBy(Id const & playerId) const
 {
-    discoveriesLog_.clear();
-
-    // A failed accusation means that the answer does not hold those cards.
-
-    bool changed = false;
-
-    disassociatePlayerAndSuspect(ANSWER_PLAYER_NAME, suspect, changed);
-    disassociatePlayerAndWeapon(ANSWER_PLAYER_NAME, weapon, changed);
-    disassociatePlayerAndRoom(ANSWER_PLAYER_NAME, room, changed);
-	checkWhoMustHoldWhichCards();
-    recordThatAnswerCanHoldOnlyOneOfEach(changed);
-
-    // Then re-apply all the suggestions
-    while (changed)
-    {
-        changed = false;
-        reapplySuggestions(changed);
-		recordThatAnswerCanHoldOnlyOneOfEach(changed);
-    }
-	checkWhoMustHoldWhichCards();
+    assert(players_.find(playerId) != players_.end());
+    Player const & p = players_.find(playerId)->second;
+    return p.cards;
 }
 
-Solver::SortedNameList Solver::mightBeHeldBy(Name const & player) const
+Solver::IdList Solver::mightHold(Id const & cardId) const
 {
-    Player const & p = players_.find(player)->second;
-
-    SortedNameList cards;
-    cards.push_back(p.suspects);
-    cards.push_back(p.weapons);
-    cards.push_back(p.rooms);
-    return cards;
-}
-
-Solver::NameList Solver::mightHold(Name const & card) const
-{
-    CardList::const_iterator s = suspects_.find(card);
-    if (s != suspects_.end())
-    {
-        return s->second.holders;
-    }
-
-    CardList::const_iterator w = weapons_.find(card);
-    if (w != weapons_.end())
-    {
-        return w->second.holders;
-    }
-
-    CardList::const_iterator r = rooms_.find(card);
-    if (r != rooms_.end())
-    {
-        return r->second.holders;
-    }
-    return NameList();
+    assert(cards_.find(cardId) != cards_.end());
+    Card const & c = cards_.find(cardId)->second;
+    return c.holders;
 }
 
 json Solver::toJson() const
 {
     json j;
-    j["suspects"]    = ::toJson(suspects_);
-    j["weapons"]     = ::toJson(weapons_);
-    j["rooms"]       = ::toJson(rooms_);
+    j["cards"]       = ::toJson(cards_);
     j["players"]     = ::toJson(players_);
     j["suggestions"] = ::toJson(suggestions_);
     return j;
 }
 
-void Solver::revealSuspect(Name const & player, Name const & card, bool & changed)
+bool Solver::PlayersAreValid(IdList const & playerIds) const
 {
-    Card & suspect = suspects_[card];
-    if (suspect.holders.size() == 1)
+    for (auto const & p : playerIds)
     {
-        assert(suspect.holders[0] == player);
-        return;
+        if (!PlayerIsValid(p))
+            return false;
     }
-
-    suspect.assignHolder(player);
-    removeOtherPlayersFromThisSuspect(player, card);
-    changed = true;
+    return true;
 }
 
-void Solver::revealWeapon(Name const & player, Name const & card, bool & changed)
+bool Solver::PlayerIsValid(Id const & playerId) const
 {
-    Card & weapon = weapons_[card];
-    if (weapon.holders.size() == 1)
+    return playerId != ANSWER_PLAYER_ID && players_.find(playerId) != players_.end();
+}
+
+bool Solver::CardsAreValid(IdList const & cardIds) const
+{
+    for (auto const & c : cardIds)
     {
-        assert(weapon.holders[0] == player);
-        return;
+        if (!CardIsValid(c))
+            return false;
     }
-
-    weapon.assignHolder(player);
-    removeOtherPlayersFromThisWeapon(player, card);
-    changed = true;
+    return true;
 }
 
-void Solver::revealRoom(Name const & player, Name const & card, bool & changed)
+bool Solver::CardIsValid(Id const & cardId) const
 {
-    Card & room = rooms_[card];
-    if (room.holders.size() == 1)
+    return cards_.find(cardId) != cards_.end();
+}
+
+bool Solver::TypeIsValid(Id const & typeId) const
+{
+    return cards_.find(typeId) != types_.end();
+}
+
+void Solver::deduce(Suggestion const & suggestion, bool & changed)
+{
+    int id = suggestion.id;
+    Id const & suggester = suggestion.player;
+    IdList const & cards = suggestion.cards;
+    IdList const & showed = suggestion.showed;
+    if (rulesId_ == "master")
     {
-        assert(room.holders[0] == player);
-        return;
-    }
+        // You can deduce from a suggestion that:
+        //		If a player shows a card but does not all but one of the suggested cards, the player must hold the one.
+        //		If a player (other than the answer and suggester) does not show a card, the player has none of the suggested cards.
+        //		If all suggested cards are shown, then the answer and the suggester hold none of the suggested cards.
 
-    room.assignHolder(player);
-    removeOtherPlayersFromThisRoom(player, card);
-    changed = true;
-}
-
-void Solver::apply(Suggestion const & suggestion, bool & changed)
-{
-    Name const & suggester  = suggestion.player;
-    Name const & suspect    = suggestion.suspect;
-    Name const & weapon     = suggestion.weapon;
-    Name const & room       = suggestion.room;
-    NameList const & showed = suggestion.showed;
-    int id                  = suggestion.id;
-
-	if (rules_ == "master")
-	{
-		// You can infer from a suggestion that:
-		//		If a player shows a card but does not hold two of the cards, the player must hold the third.
-		//		If a player (other than the answer and suggester) does not show a card, the player has none of those cards.
-		//		If all three cards are shown, then the answer and the suggester hold none of those cards.
-
-		for (auto const & p : players_)
-		{
-			Name const & name = p.first;
-			if (std::find(showed.begin(), showed.end(), name) != showed.end())
-			{
-				// The player showed a card. If the player does not hold two of the three cards, the player must hold the third.
-				Player const & player = p.second;
-				bool noSuspect = !player.mightHaveSuspect(suspect);
-				bool noWeapon = !player.mightHaveWeapon(weapon);
-				bool noRoom = !player.mightHaveRoom(room);
-
-				if (noSuspect && noWeapon)
-				{
-					addDiscovery(name,
-						room,
-						"showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others", true);
-					revealRoom(name, room, changed);
-				}
-				else if (noSuspect && noRoom)
-				{
-					addDiscovery(name,
-						weapon,
-						"showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others", true);
-					revealWeapon(name, weapon, changed);
-				}
-				else if (noWeapon && noRoom)
-				{
-					addDiscovery(name,
-						suspect,
-						"showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others", true);
-					revealSuspect(name, suspect, changed);
-				}
-			}
-			else if (name != ANSWER_PLAYER_NAME && name != suggester)
-			{
-				// If the player must show cards but did not, then they don't hold any of them.
-				addDiscovery(name, suspect, "did not show a card in suggestion #" + std::to_string(id), false);
-				addDiscovery(name, weapon, "did not show a card in suggestion #" + std::to_string(id), false);
-				addDiscovery(name, room, "did not show a card in suggestion #" + std::to_string(id), false);
-				recordThatPlayerDoesntHoldTheseCards(name, suggestion, changed);
-			}
-			else if (showed.size() == 3)
-			{
-				// If all three cards were shown, then even players that don't show cards don't hold them.
-				addDiscovery(name,
-					suspect,
-					"all three cards were shown by other players in suggestion #" + std::to_string(id), false);
-				addDiscovery(name,
-					weapon,
-					"all three cards were shown by other players in suggestion #" + std::to_string(id), false);
-				addDiscovery(name,
-					room,
-					"all three cards were shown by other players in suggestion #" + std::to_string(id), false);
-				recordThatPlayerDoesntHoldTheseCards(name, suggestion, changed);
-			}
-		}
-	}
-	else
-	{
-		// You can infer from a suggestion that:
-		//		If the showed list is empty, then none of the players (except possibly the suggester or the answer) have the cards.
-		//		All the players in the showed list but the last hold none of the cards.
-		//		If the player that showed a card does not hold two of the cards, the player must hold the third.
-
-		if (showed.empty())
-		{
-			for (auto const & p : players_)
-			{
-				Name const & name = p.first;
-				if (name != ANSWER_PLAYER_NAME && name != suggester)
-				{
-					addDiscovery(name, suspect, "did not show a card in suggestion #" + std::to_string(id), false);
-					addDiscovery(name, weapon, "did not show a card in suggestion #" + std::to_string(id), false);
-					addDiscovery(name, room, "did not show a card in suggestion #" + std::to_string(id), false);
-					recordThatPlayerDoesntHoldTheseCards(name, suggestion, changed);
-				}
-			}
-		}
-		else
-		{
-			// For all but the last
-			for (int i = 0; i < showed.size() - 1; ++i)
-			{
-				Name const & name = showed[i];
-				addDiscovery(name, suspect, "did not show a card in suggestion #" + std::to_string(id), false);
-				addDiscovery(name, weapon, "did not show a card in suggestion #" + std::to_string(id), false);
-				addDiscovery(name, room, "did not show a card in suggestion #" + std::to_string(id), false);
-				recordThatPlayerDoesntHoldTheseCards(name, suggestion, changed);
-			}
-
-			{
-				// The last player showed a card. If the player does not hold two of the three cards, the player must hold the
-				// third.
-				Name const & name = showed[showed.size() - 1];
-				Player const & player = players_[name];
-				bool noSuspect = !player.mightHaveSuspect(suspect);
-				bool noWeapon = !player.mightHaveWeapon(weapon);
-				bool noRoom = !player.mightHaveRoom(room);
-
-				if (noSuspect && noWeapon)
-				{
-					addDiscovery(name,
-						room,
-						"showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others", true);
-					revealRoom(name, room, changed);
-				}
-				else if (noSuspect && noRoom)
-				{
-					addDiscovery(name,
-						weapon,
-						"showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others", true);
-					revealWeapon(name, weapon, changed);
-				}
-				else if (noWeapon && noRoom)
-				{
-					addDiscovery(name,
-						suspect,
-						"showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others", true);
-					revealSuspect(name, suspect, changed);
-				}
-			}
-		}
-	}
-}
-
-void Solver::reapplySuggestions(bool & changed)
-{
-    for (auto & s : suggestions_)
-    {
-        apply(s, changed);
-    }
-}
-
-void Solver::disassociatePlayerAndRoom(Name const & playerName, Name const & room, bool & changed)
-{
-    Player & player = players_[playerName];
-    if (player.mightHaveRoom(room))
-    {
-        player.removeRoom(room);
-        rooms_[room].removeHolder(playerName);
-        changed = true;
-    }
-}
-
-void Solver::disassociatePlayerAndWeapon(Name const & playerName, Name const & weapon, bool & changed)
-{
-    Player & player = players_[playerName];
-    if (player.mightHaveWeapon(weapon))
-    {
-        player.removeWeapon(weapon);
-        weapons_[weapon].removeHolder(playerName);
-        changed = true;
-    }
-}
-
-void Solver::disassociatePlayerAndSuspect(Name const & playerName, Name const & suspect, bool & changed)
-{
-    Player & player = players_[playerName];
-    if (player.mightHaveSuspect(suspect))
-    {
-        player.removeSuspect(suspect);
-        suspects_[suspect].removeHolder(playerName);
-        changed = true;
-    }
-}
-
-bool Solver::isSuspect(Name const & c) const
-{
-    return suspects_.find(c) != suspects_.end();
-}
-
-bool Solver::isWeapon(Name const & c) const
-{
-    return weapons_.find(c) != weapons_.end();
-}
-
-bool Solver::isRoom(Name const & c) const
-{
-    return rooms_.find(c) != rooms_.end();
-}
-
-void Solver::removeOtherPlayersFromThisSuspect(Name const & player, Name const & suspect)
-{
-    for (auto & p : players_)
-    {
-        if (p.first != player)
+        for (auto const & p : players_)
         {
-            p.second.removeSuspect(suspect);
-        }
-    }
-}
+            Id const & playerId = p.first;
+            Player const & player = p.second;
 
-void Solver::removeOtherPlayersFromThisWeapon(Name const & player, Name const & weapon)
-{
-    for (auto & p : players_)
-    {
-        if (p.first != player)
-        {
-            p.second.removeWeapon(weapon);
-        }
-    }
-}
-
-void Solver::removeOtherPlayersFromThisRoom(Name const & player, Name const & room)
-{
-    for (auto & p : players_)
-    {
-        if (p.first != player)
-        {
-            p.second.removeRoom(room);
-        }
-    }
-}
-
-void Solver::recordThatPlayerDoesntHoldTheseCards(Name const & name, Suggestion const & suggestion, bool & changed)
-{
-    // Remove all suggested cards from the player.
-    disassociatePlayerAndSuspect(name, suggestion.suspect, changed);
-    disassociatePlayerAndWeapon(name, suggestion.weapon, changed);
-    disassociatePlayerAndRoom(name, suggestion.room, changed);
-}
-
-void Solver::recordThatAnswerCanHoldOnlyOneOfEach(bool & changed)
-{
-    recordThatAnswerCanHoldOnlyOneSuspect(changed);
-    recordThatAnswerCanHoldOnlyOneWeapon(changed);
-    recordThatAnswerCanHoldOnlyOneRoom(changed);
-}
-
-void Solver::recordThatAnswerCanHoldOnlyOneSuspect(bool & changed)
-{
-    Player & answer = players_[ANSWER_PLAYER_NAME];
-
-    // See if there is a suspect that is held by the answer
-    Name suspect;
-    for (auto const & s : suspects_)
-    {
-        NameList const & holders = s.second.holders;
-        if (holders.size() == 1 && holders[0] == ANSWER_PLAYER_NAME)
-        {
-            suspect = s.first;
-            break;
-        }
-    }
-
-    // If so, then the answer can not hold any other suspects
-    if (!suspect.empty())
-    {
-        NameList suspects = answer.suspects;
-        for (auto const & s : suspects)
-        {
-            if (s != suspect)
+            // If the player showed a card ...
+            if (std::find(showed.begin(), showed.end(), playerId) != showed.end())
             {
-                addDiscovery(ANSWER_PLAYER_NAME, s, "ANSWER can only hold one suspect", false);
-                disassociatePlayerAndSuspect(ANSWER_PLAYER_NAME, s, changed);
+                // ..., then if the player does not hold all but one of the cards, the player must hold the one.
+                int mightHoldCount = 0;
+                Id mustHold;
+                for (auto const & c : cards)
+                {
+                    if (player.mightHold(c))
+                    {
+                        ++mightHoldCount;
+                    }
+                    else
+                    {
+                        if (mustHold.empty())
+                            mustHold = c;   // Assuming none of the others are held
+                        else
+                            break;          // Optimization
+                    }
+                }
+                if (mightHoldCount == cards.size() - 1)
+                {
+                    addDiscovery(playerId,
+                        mustHold,
+                        "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others",
+                        true);
+                    associatePlayerWithCard(playerId, mustHold, changed);
+                }
+            }
+
+            // Otherwise, if the player is other than the answer and suggester ...
+            else if (playerId != ANSWER_PLAYER_ID && playerId != suggester)
+            {
+                // ... then they don't hold any of them.
+                for (auto const & c : cards)
+                {
+                    addDiscovery(playerId, c, "did not show a card in suggestion #" + std::to_string(id), false);
+                }
+                disassociatePlayerWithCards(playerId, suggestion.cards, changed);
+            }
+
+            // Otherwise, if all three cards were shown ...
+            else if (showed.size() == 3)
+            {
+                // ... then players that don't show cards don't hold them.
+                // ... then they don't hold any of them.
+                for (auto const & c : cards)
+                {
+                    addDiscovery(playerId,
+                        c,
+                        "all three cards were shown by other players in suggestion #" + std::to_string(id),
+                        false);
+                }
+                disassociatePlayerWithCards(playerId, suggestion.cards, changed);
+            }
+        }
+    }
+    else
+    {
+        // You can deduce from a suggestion that:
+        //		If nobody showed a card, then none of the players (except possibly the suggester or the answer) have the cards.
+        //		Only the last player in the showed list might hold any of the suggested cards.
+        //		If the player that showed a card does not hold all but one of the cards, the player must hold the one.
+
+        if (showed.empty())
+        {
+            for (auto const & p : players_)
+            {
+                Id const & playerId = p.first;
+                if (playerId != ANSWER_PLAYER_ID && playerId != suggester)
+                {
+                    for (auto const & c : cards)
+                    {
+                        addDiscovery(playerId, c, "did not show a card in suggestion #" + std::to_string(id), false);
+                    }
+                    disassociatePlayerWithCards(playerId, suggestion.cards, changed);
+                }
+            }
+        }
+        else
+        {
+            // All but the last player have none of the cards
+            for (int i = 0; i < showed.size() - 1; ++i)
+            {
+                Id const & playerId = showed[i];
+                for (auto const & c : cards)
+                {
+                    addDiscovery(playerId, c, "did not show a card in suggestion #" + std::to_string(id), false);
+                }
+                disassociatePlayerWithCards(playerId, suggestion.cards, changed);
+            }
+
+            // The last player showed a card.
+            {
+                // If the player does not hold all but one of cards, the player must hold the one.
+                Id const & playerId = showed[showed.size() - 1];
+                Player const & player = players_[playerId];
+                int mightHoldCount = 0;
+                Id mustHold;
+                for (auto const & c : cards)
+                {
+                    if (player.mightHold(c))
+                    {
+                        ++mightHoldCount;
+                    }
+                    else
+                    {
+                        if (mustHold.empty())
+                            mustHold = c;   // Assuming none of the others are held
+                        else
+                            break;          // Optimization
+                    }
+                }
+                if (mightHoldCount == cards.size() - 1)
+                {
+                    addDiscovery(playerId,
+                        mustHold,
+                        "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others",
+                        true);
+                    associatePlayerWithCard(playerId, mustHold, changed);
+                }
             }
         }
     }
 }
 
-void Solver::recordThatAnswerCanHoldOnlyOneWeapon(bool & changed)
+// Make deductions based on the player having these cards
+void Solver::deduce(Id const & playerId, IdList const & cards, bool & changed)
 {
-    Player & answer = players_[ANSWER_PLAYER_NAME];
+    Player & player = players_[playerId];
 
-    // See if there is a weapon that is held by the answer
-    Name weapon;
-    for (auto const & w : weapons_)
+    for (auto & c : cards_)
     {
-        NameList const & holders = w.second.holders;
-        if (holders.size() == 1 && holders[0] == ANSWER_PLAYER_NAME)
+        if (std::find(cards.begin(), cards.end(), c.first) != cards.end())
         {
-            weapon = w.first;
-            break;
+            addDiscovery(playerId, c.first, "hand", true);
+            associatePlayerWithCard(playerId, c.first, changed);
+        }
+        else
+        {
+            addDiscovery(playerId, c.first, "hand", false);
+            disassociatePlayerWithCard(playerId, c.first, changed);
+        }
+    }
+}
+
+// Make deductions based on the player having this cardId
+void Solver::deduce(Id const & playerId, Id const & cardId, bool & changed)
+{
+    addDiscovery(playerId, cardId, "revealed", true);
+    associatePlayerWithCard(playerId, cardId, changed);
+}
+
+bool Solver::makeOtherDeductions(bool changed)
+{
+    checkThatAnswerHoldsOnlyOneOfEach(changed);
+
+    // While anything has changed, then re-apply all the suggestions
+    while (changed)
+    {
+        changed = false;
+        for (auto & s : suggestions_)
+        {
+            deduce(s, changed);
+        }
+        checkThatAnswerHoldsOnlyOneOfEach(changed);
+    }
+    return changed;
+}
+
+void Solver::checkThatAnswerHoldsOnlyOneOfEach(bool & changed)
+{
+    Player & answer = players_[ANSWER_PLAYER_ID];
+
+    // See if there are any cards that held by the answer
+    std::map<Id, Id> held;
+    for (auto const & c : cards_)
+    {
+        IdList const & holders = c.second.holders;
+        if (holders.size() == 1 && holders[0] == ANSWER_PLAYER_ID)
+        {
+            Id const & cardId = c.first;
+            Id const & type = cards_[cardId].info.type;
+            held[type] = cardId;
         }
     }
 
-    // If so, then the answer can not hold any other weapons
-    if (!weapon.empty())
+    // If so, then the answer can not hold any other cards of the same types
+    IdList cards = answer.cards;    // Must use a copy because the list of cards may be changed on the fly
+    for (auto const & c : cards)
     {
-        NameList weapons = answer.weapons;
-        for (auto const & w : weapons)
+        for (auto const & h : held)
         {
-            if (w != weapon)
+            if (cards_[c].info.type == h.first && c != h.second)
             {
-                addDiscovery(ANSWER_PLAYER_NAME, w, "ANSWER can only hold one weapon", false);
-                disassociatePlayerAndWeapon(ANSWER_PLAYER_NAME, w, changed);
+                addDiscovery(ANSWER_PLAYER_ID, c, "ANSWER can only hold one " + h.first, false);
+                disassociatePlayerWithCard(ANSWER_PLAYER_ID, c, changed);
             }
         }
     }
 }
 
-void Solver::recordThatAnswerCanHoldOnlyOneRoom(bool & changed)
+void Solver::associatePlayerWithCard(Id const & playerId, Id const & cardId, bool & changed)
 {
-    Player & answer = players_[ANSWER_PLAYER_NAME];
-
-    // See if there is a room that is held by the answer
-    Name room;
-    for (auto const & r : rooms_)
+    Card & c = cards_[cardId];
+    if (c.holders.size() == 1)
     {
-        NameList const & holders = r.second.holders;
-        if (holders.size() == 1 && holders[0] == ANSWER_PLAYER_NAME)
-        {
-            room = r.first;
-            break;
-        }
+        assert(c.holders[0] == playerId);
+        return;
     }
 
-    // If so, then the answer can not hold any other rooms
-    if (!room.empty())
+    disassociateOtherPlayersWithCard(playerId, cardId, changed);
+    addDiscoveredCardHolders();
+    changed = true;
+}
+
+void Solver::disassociatePlayerWithCard(Id const & playerId, Id const & cardId, bool & changed)
+{
+    Player & player = players_[playerId];
+    if (player.mightHold(cardId))
     {
-        NameList rooms = answer.rooms;
-        for (auto const & r : rooms)
+        player.remove(cardId);
+        cards_[cardId].removeHolder(playerId);
+        changed = true;
+    }
+}
+
+void Solver::disassociatePlayerWithCards(Id const & playerId, IdList const & suggestion, bool & changed)
+{
+    for (auto const & c : suggestion)
+    {
+        disassociatePlayerWithCard(playerId, c, changed);
+    }
+}
+
+void Solver::disassociateOtherPlayersWithCard(Id const & playerId, Id const & cardId, bool & changed)
+{
+    for (auto & p : players_)
+    {
+        if (p.first != playerId)
         {
-            if (r != room)
-            {
-                addDiscovery(ANSWER_PLAYER_NAME, r, "ANSWER can only hold one room", false);
-                disassociatePlayerAndRoom(ANSWER_PLAYER_NAME, r, changed);
-            }
+            disassociatePlayerWithCard(p.first, cardId, changed);
         }
     }
 }
 
-void Solver::addDiscovery(Name const & player, Name const & card, std::string const & reason, bool has)
+bool Solver::cardIsType(Id const & c, Id const & type) const
 {
-    auto fact = std::make_pair(player, card);
+    return cards_.find(c)->second.info.type == type;
+}
+
+void Solver::addDiscovery(Id const & playerId, Id const & cardId, std::string const & reason, bool has)
+{
+    auto fact = std::make_pair(playerId, cardId);
     auto f    = facts_.find(fact);
     if (f == facts_.end())
     {
-        std::string discovery = player + (has ? " holds " : " does not hold ") + card + ": " + reason;
+        std::string discovery = playerId + (has ? " holds " : " does not hold ") + cardId + ": " + reason;
         discoveriesLog_.push_back(discovery);
         facts_[fact] = has;
     }
@@ -666,44 +430,24 @@ void Solver::addDiscovery(Name const & player, Name const & card, std::string co
     }
 }
 
-void Solver::checkWhoMustHoldWhichCards()
+void Solver::addDiscoveredCardHolders()
 {
-	for (auto & s : suspects_)
+	for (auto & c : cards_)
 	{
-		NameList const & holders = s.second.holders;
+		IdList const & holders = c.second.holders;
 		if (holders.size() == 1)
-			addDiscovery(holders[0], s.first, "nobody else holds it", true);
-	}
-
-	for (auto & w : weapons_)
-	{
-		NameList const & holders = w.second.holders;
-		if (holders.size() == 1)
-			addDiscovery(holders[0], w.first, "nobody else holds it", true);
-	}
-
-	for (auto & r : rooms_)
-	{
-		NameList const & holders = r.second.holders;
-		if (holders.size() == 1)
-			addDiscovery(holders[0], r.first, "nobody else holds it", true);
+			addDiscovery(holders[0], c.first, "nobody else holds it", true);
 	}
 }
 
-void Solver::Card::assignHolder(Name const & player)
+void Solver::Card::removeHolder(Id const & playerId)
 {
-    holders.clear();
-    holders.push_back(player);
+    holders.erase(std::remove(holders.begin(), holders.end(), playerId), holders.end());
 }
 
-void Solver::Card::removeHolder(Name const & player)
+bool Solver::Card::mightBeHeldBy(Id const & playerId) const
 {
-    holders.erase(std::remove(holders.begin(), holders.end(), player), holders.end());
-}
-
-bool Solver::Card::mightBeHeldBy(Name const & player) const
-{
-    return std::find(holders.begin(), holders.end(), player) != holders.end();
+    return std::find(holders.begin(), holders.end(), playerId) != holders.end();
 }
 
 json Solver::Card::toJson() const
@@ -713,42 +457,20 @@ json Solver::Card::toJson() const
     return j;
 }
 
-void Solver::Player::removeSuspect(Name const & card)
+void Solver::Player::remove(Id const & cardId)
 {
-    suspects.erase(std::remove(suspects.begin(), suspects.end(), card), suspects.end());
+    cards.erase(std::remove(cards.begin(), cards.end(), cardId), cards.end());
 }
 
-void Solver::Player::removeWeapon(Name const & card)
+bool Solver::Player::mightHold(Id const & cardId) const
 {
-    weapons.erase(std::remove(weapons.begin(), weapons.end(), card), weapons.end());
-}
-
-void Solver::Player::removeRoom(Name const & card)
-{
-    rooms.erase(std::remove(rooms.begin(), rooms.end(), card), rooms.end());
-}
-
-bool Solver::Player::mightHaveSuspect(Name const & suspect) const
-{
-    return std::find(suspects.begin(), suspects.end(), suspect) != suspects.end();
-}
-
-bool Solver::Player::mightHaveWeapon(Name const & weapon) const
-{
-    return std::find(weapons.begin(), weapons.end(), weapon) != weapons.end();
-}
-
-bool Solver::Player::mightHaveRoom(Name const & room) const
-{
-    return std::find(rooms.begin(), rooms.end(), room) != rooms.end();
+    return std::find(cards.begin(), cards.end(), cardId) != cards.end();
 }
 
 json Solver::Player::toJson() const
 {
     json j;
-    j["suspects"] = suspects;
-    j["weapons"]  = weapons;
-    j["rooms"]    = rooms;
+    j["cards"] = cards;
     return j;
 }
 
@@ -756,9 +478,7 @@ json Solver::Suggestion::toJson() const
 {
     json j;
     j["player"]  = player;
-    j["suspect"] = suspect;
-    j["weapon"]  = weapon;
-    j["room"]    = room;
+    j["cards"] = cards;
     j["showed"]  = showed;
     return j;
 }

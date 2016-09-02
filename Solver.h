@@ -10,124 +10,133 @@
 class Solver
 {
 public:
-    using Name			 = std::string;
-    using NameList       = std::vector<Name>;
-    using SortedNameList = std::vector<std::vector<Name> >;
+    using Id           = std::string;
+    using IdList       = std::vector<Id>;
+
+    struct TypeInfo
+    {
+        std::string name;
+        std::string title;
+        std::string preposition;
+    };
+    using TypeInfoList = std::map<TypeInfo>;
+
+    struct CardInfo
+    {
+        std::string name;
+        std::string type;
+    };
+    using CardInfoList = std::map<std::string, CardInfo>;
+
+    struct Rules
+    {
+        std::string     id;
+        TypeInfoList    types;  // Types by ID
+        CardInfoList    cards;  // Cards by ID
+    };
 
     // Constructor
-    Solver(std::string const & rules,
-		   NameList const & players,
-           NameList const & suspects,
-           NameList const & weapons,
-           NameList const & rooms);
+    Solver(Rules const & rules, IdList const & players);
 
     //! Processes a player's hand
-    void hand(Name const & player, NameList const & cards);
+    void hand(Id const & playerId, IdList const & cardIds);
 
     //! Processes a card being revealed by a player
-    void show(Name const & player, Name const & card);
+    void show(Id const & playerId, Id const & cardId);
 
     //! Processes the result of a suggestion
-    void suggest(Name const & player, NameList const & cards, NameList const & showed, int id);
+    void suggest(Id const & playerId, IdList const & cards, IdList const & showed, int id);
 
-    //! Processes the result of a failed accusation
-    void accuse(Name const & suspect, Name const & weapon, Name const & room);
-
-    //! Returns a sorted list of cards that might be held by the player
-    SortedNameList mightBeHeldBy(Name const & player) const;
+    //! Returns a list of cards that might be held by the player
+    IdList mightBeHeldBy(Id const & playerId) const;
 
     //! Returns a list of players that might hold the card
-    NameList mightHold(Name const & card) const;
+    IdList mightHold(Id const & cardId) const;
 
-    //! Store the state of the solver in a json object
+    //! Stores the state of the solver in a json object
     nlohmann::json toJson() const;
-	
-	//! Returns latest discoveries
-	std::vector<std::string> discoveries() const { return discoveriesLog_; }
+    
+    //! Returns latest discoveries
+    std::vector<std::string> discoveries() const { return discoveriesLog_; }
 
-    static char const * const ANSWER_PLAYER_NAME;   //<! Player name of the answer
+    // Validates a list of player IDs
+    bool PlayersAreValid(IdList const & playerIds) const;
+
+    // Validates a player ID
+    bool PlayerIsValid(Id const & playerId) const;
+
+    // Validates a list of card IDs
+    bool CardsAreValid(IdList const & cardIds) const;
+
+    // Validates a card ID
+    bool CardIsValid(Id const & cardId) const;
+
+    // Validates a type ID
+    bool Solver::TypeIsValid(Id const & typeId) const;
+
+    static char const * const ANSWER_PLAYER_ID;   //<! Player id of the answer
 
 private:
     struct Player
     {
-        NameList       suspects; // List of suspects the player might be holding
-        NameList       weapons; // List of weapons the player might be holding
-        NameList       rooms; // List of rooms the player might be holding
+        IdList cards; // List of IDs of cards that the player might be holding
 
-        void           removeSuspect(Name const & card);
-        void           removeWeapon(Name const & card);
-        void           removeRoom(Name const & card);
-        bool           mightHaveSuspect(Name const & suspect) const;
-        bool           mightHaveWeapon(Name const & weapon) const;
-        bool           mightHaveRoom(Name const & room) const;
+        void           remove(Id const & cardId);
+        bool           mightHold(Id const & cardId) const;
         nlohmann::json toJson() const;
     };
 
     struct Card
     {
-        NameList       holders; // List of players that might be holding this card
+        IdList holders; // List of IDs of players that might be holding this card
+        CardInfo info;
 
-        void           assignHolder(Name const & player);
-        void           removeHolder(Name const & player);
-        bool           mightBeHeldBy(Name const & player) const;
+        void           assignHolder(Id const & playerId);
+        void           removeHolder(Id const & playerId);
+        bool           mightBeHeldBy(Id const & playerId) const;
         nlohmann::json toJson() const;
     };
 
     struct Suggestion
     {
-		int			   id;
-        Name           player;
-        Name           suspect;
-        Name           weapon;
-        Name           room;
-        NameList       showed; // Players that showed a card
+        int    id;
+        Id     player;
+        IdList cards;
+        IdList showed; // Value depends on the rules
         nlohmann::json toJson() const;
     };
 
-	typedef std::pair<std::string, std::string> Fact;
+    typedef std::pair<std::string, Id> Fact;
 
-    using PlayerList     = std::map<Name, Player>;
-    using CardList       = std::map<Name, Card>;
+    using PlayerList     = std::map<Id, Player>;
+    using CardList       = std::map<Id, Card>;
     using SuggestionList = std::vector<Suggestion>;
-	using FactList = std::map<Fact, bool>;
+    using FactList = std::map<Fact, bool>;
 
-    void revealSuspect(Name const & player, Name const & card, bool & changed);
-    void revealWeapon(Name const & player, Name const & card, bool & changed);
-    void revealRoom(Name const & player, Name const & card, bool & changed);
+    void deduce(Suggestion const & suggestion, bool & changed);
+    void deduce(Id const & playerId, IdList const & cardIds, bool & changed);
+    void deduce(Id const & playerId, Id const & cardId, bool & changed);
 
-    void apply(Suggestion const & suggestion, bool & changed);
-    void reapplySuggestions(bool & changed);
+    bool makeOtherDeductions(bool changed);
+    void checkThatAnswerHoldsOnlyOneOfEach(bool & changed);
 
-    void disassociatePlayerAndSuspect(Name const & playerName, Name const & suspect, bool & changed);
-    void disassociatePlayerAndWeapon(Name const & playerName, Name const & weapon, bool & changed);
-    void disassociatePlayerAndRoom(Name const & playerName, Name const & room, bool & changed);
+    void associatePlayerWithCard(Id const & playerId, Id const & cardId, bool & changed);
+    void disassociatePlayerWithCard(Id const & playerId, Id const & cardId, bool & changed);
+    void disassociatePlayerWithCards(Id const & playerId, IdList const & cardIds, bool & changed);
+    void disassociateOtherPlayersWithCard(Id const & playerId, Id const & cardId, bool & changed);
 
-    bool isSuspect(Name const & card) const;
-    bool isWeapon(Name const & card) const;
-    bool isRoom(Name const & card) const;
+    bool cardIsType(Id const & cardId, Id const & type) const;
 
-    void removeOtherPlayersFromThisSuspect(Name const & player, Name const & suspect);
-    void removeOtherPlayersFromThisWeapon(Name const & player, Name const & weapon);
-    void removeOtherPlayersFromThisRoom(Name const & player, Name const & room);
-    
-	void recordThatPlayerDoesntHoldTheseCards(Name const & name, Suggestion const & suggestion, bool & changed);
-    void recordThatAnswerCanHoldOnlyOneOfEach(bool & changed);
+    void addDiscoveredCardHolders();
+    void addDiscovery(Id const & playerId, Id const & cardId, std::string const & reason, bool has);
 
-	void recordThatAnswerCanHoldOnlyOneSuspect(bool & changed);
-	void recordThatAnswerCanHoldOnlyOneWeapon(bool & changed);
-	void recordThatAnswerCanHoldOnlyOneRoom(bool & changed);
-
-	void addDiscovery(Name const & player, Name const & card, std::string const & reason, bool has);
-	void checkWhoMustHoldWhichCards();
-
-	std::string rules_;
-    PlayerList players_;
-    CardList suspects_;
-    CardList weapons_;
-    CardList rooms_;
-    SuggestionList suggestions_;
-	FactList facts_;
-	std::vector<std::string> discoveriesLog_;
+    std::string rulesId_;
+    PlayerList players_;            // List of all the players by id
+    CardList cards_;                // List of all the cards by id
+    TypeInfoList types_;            // List of all card types by id
+    SuggestionList suggestions_;    // List of all suggestions by id
+    FactList facts_;
+    std::vector<std::string> discoveriesLog_;
 };
 
 #endif // !defined(SOLVER_H)

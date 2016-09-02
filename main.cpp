@@ -9,40 +9,46 @@ using json = nlohmann::json;
 
 namespace
 {
-static void loadConfiguration(char const * name);
 
-std::string rules = "classic";
-std::vector<Solver::Name> players;
-std::vector<Solver::Name> suspects =
+bool loadConfiguration(char const * name);
+void listTypes(std::ostream & out, Solver::TypeInfoList const & types);
+void listCards(std::ostream & out, Solver::TypeInfo const & type, Solver::CardInfoList const & cards);
+
+Solver::TypeInfoList s_types =
 {
-    "Colonel Mustard",
-    "Mrs. White",
-    "Professor Plum",
-    "Mrs. Peacock",
-    "Mr. Green",
-    "Miss Scarlet"
+    { "suspect", "suspect", "Suspects", "" },
+    { "weapon",  "weapon",  "Weapons",  "with the" },
+    { "room",    "room",    "Rooms",    "in the"   }
 };
-std::vector<Solver::Name> weapons =
+
+Solver::CardInfoList s_cards =
 {
-    "Revolver",
-    "Knife",
-    "Rope",
-    "Lead pipe",
-    "Wrench",
-    "Candlestick"
+    { "mustard",      { "Colonel Mustard", "suspect" } },
+    { "white",        { "Mrs. White",      "suspect" } },
+    { "plum",         { "Professor Plum",  "suspect" } },
+    { "peacock",      { "Mrs. Peacock",    "suspect" } },
+    { "green",        { "Mr. Green",       "suspect" } },
+    { "scarlet",      { "Miss Scarlet"     "suspect" } },
+    { "revolver",     { "Revolver",        "weapon"  } },
+    { "knife",        { "Knife",           "weapon"  } },
+    { "rope",         { "Rope",            "weapon"  } },
+    { "pipe",         { "Lead pipe",       "weapon"  } },
+    { "wrench",       { "Wrench",          "weapon"  } },
+    { "candlestick",  { "Candlestick"      "weapon"  } },
+    { "dining",       { "Dining room",     "room"    } },
+    { "conservatory", { "Conservatory",    "room"    } },
+    { "kitchen",      { "Kitchen",         "room"    } },
+    { "study",        { "Study",           "room"    } },
+    { "library",      { "Library",         "room"    } },
+    { "billiard",     { "Billiard room",   "room"    } },
+    { "lounge",       { "Lounge",          "room"    } },
+    { "ballroom",     { "Ballroom",        "room"    } },
+    { "hall",         { "Hall"             "room"    } }
 };
-std::vector<Solver::Name> rooms =
-{
-    "Dining room",
-    "Conservatory",
-    "Kitchen",
-    "Study",
-    "Library",
-    "Billiard room",
-    "Lounge",
-    "Ballroom",
-    "Hall"
-};
+
+std::string s_rules = "classic";
+std::vector<Solver::Id> s_players;
+
 } // anonymous namespace
 
 int main(int argc, char ** argv)
@@ -81,38 +87,62 @@ int main(int argc, char ** argv)
 
     // Load configuration
     if (configurationFileName)
-        loadConfiguration(configurationFileName);
+    {
+        if (!loadConfiguration(configurationFileName))
+        {
+            std::cerr << "Cannot load the configuration from '" << inputFileName << "'" << std::endl;
+            exit(1);
+        }
+    }
 
     if (inputFileName)
     {
         infilestream.open(inputFileName);
         if (infilestream.is_open())
+        {
             in = &infilestream;
+        }
+        else
+        {
+            std::cerr << "Cannot open '" << inputFileName << "' for reading." << std::endl;
+            exit(2);
+        }
     }
 
     if (outputFileName)
     {
         outfilestream.open(outputFileName);
         if (outfilestream.is_open())
+        {
             out = &outfilestream;
+        }
+        else
+        {
+            std::cerr << "Cannot open '" << outputFileName << "' for writing." << std::endl;
+            exit(3);
+        }
     }
 
-    *out << "rules = " << rules << std::endl;
-    *out << "suspects = " << json(suspects).dump() << std::endl;
-    *out << "weapons = " << json(weapons).dump() << std::endl;
-    *out << "rooms = " << json(rooms).dump() << std::endl;
+    *out << "Rules: " << s_rules << std::endl;
+    listTypes(*out, s_types);
+    for (auto const & t : s_types)
+    {
+        listCards(*out, t, s_cards);
+    }
+
     *out << std::endl;
 
     // Load player list
-    Solver::Name input;
+    Solver::Id input;
     std::getline(*in, input);
-    players = json::parse(input);
+    s_players = json::parse(input);
 
-    *out << "players = " << json(players).dump() << std::endl;
+    *out << "players = " << json(s_players).dump() << std::endl;
     *out << std::endl;
 
     int suggestionId = 0;
-    Solver solver(rules, players, suspects, weapons, rooms);
+    Solver::Rules rules = { s_rules, s_types, s_cards };
+    Solver solver(rules, s_players);
     while (true)
     {
         std::getline(*in, input);
@@ -134,12 +164,6 @@ int main(int argc, char ** argv)
             solver.suggest(s["player"], s["cards"], s["showed"], suggestionId);
             ++suggestionId;
         }
-        else if (turn.find("accuse") != turn.end())
-        {
-            *out << "!!!! " << input << std::endl;
-            auto a = turn["accuse"];
-            solver.accuse(a["suspect"], a["weapon"], a["room"]);
-        }
         else if (turn.find("hand") != turn.end())
         {
             *out << "**** " << input << std::endl;
@@ -160,7 +184,7 @@ int main(int argc, char ** argv)
         }
 
 //        *out << "state = " << solver.toJson().dump() << std::endl;
-        *out << "ANSWER: " << json(solver.mightBeHeldBy(Solver::ANSWER_PLAYER_NAME)).dump() << std::endl;
+        *out << "ANSWER: " << json(solver.mightBeHeldBy(Solver::ANSWER_PLAYER_ID)).dump() << std::endl;
         *out << std::endl;
     }
     return 0;
@@ -168,21 +192,81 @@ int main(int argc, char ** argv)
 
 namespace
 {
-void loadConfiguration(char const * name)
+
+//    {
+//        "types" : [
+//            { "id" : "suspect", "name" : "Suspect", "preposition" : ""         },
+//            { "id" : "weapon",  "name" : "Weapon",  "preposition" : "with the" },
+//            { "id" : "room",    "name" : "Room",    "preposition" : "in the"   }
+//        ]
+//    }
+//    {
+//        "cards" : [
+//            { "id" : "mustard", "name" : "Colonel Mustard", "type" : "suspect" },
+//            { "id" : "knife",   "name" : "Knife",           "type" : "weapon"  },
+//            { "id" : "studio",  "name" : "Studio",          "type" : "room"    }
+//        ]
+//    }
+
+bool loadConfiguration(char const * name)
 {
     std::ifstream file(name);
     if (!file.is_open())
-        return;
+        return false;
 
-    json j;
-    file >> j;
-    if (j.find("rules") != j.end())
-        rules = j["rules"];
-    if (j.find("suspects") != j.end())
-        suspects = j["suspects"];
-    if (j.find("weapons") != j.end())
-        weapons = j["weapons"];
-    if (j.find("rooms") != j.end())
-        rooms = j["rooms"];
+    try
+    {
+        json j;
+        file >> j;
+
+        json jtypes = j["types"];
+        for (auto const & a : jtypes)
+        {
+            if (a.find("id") == a.end() || a.find("name") == a.end() || a.find("preposition") == a.end())
+                throw std::domain_error("Invalid card type, missing information.");
+
+            Solver::TypeInfo type = { a["name"], a["preposition"] };
+            s_types[a["id"]] = type;
+        }
+
+        json jcards = j["cards"];
+        for (auto const & c : jcards)
+        {
+            if (c.find("id") == c.end() || c.find("name") == c.end() || c.find("type") == c.end())
+                throw std::domain_error("Invalid card configuration.");
+
+            Solver::CardInfo card = { c["name"], c["type"] };
+            s_cards[c["id"]] = card;
+        }
+    }
+    catch (std::exception e)
+    {
+        std::cout << "Failed to load configuration file: " << e.what() << std::endl;
+        return false;
+    }
 }
+
+void listCards(std::ostream & out, Solver::TypeInfo const & type, Solver::CardInfoList const & cards)
+{
+    out << type.title << ": ";
+    for (auto const & c : cards)
+    {
+        if (c.second.type == type.id)
+        {
+            out << '\'' << c.second.name << "' ";
+        }
+    }
+    out << std::endl;
+}
+
+void listTypes(std::ostream & out, Solver::TypeInfoList const & types)
+{
+    out << "Types: ";
+    for (auto const & t : types)
+    {
+        out << '\'' << t.name << "' ";
+    }
+    out << std::endl;
+}
+
 } // anonymous namespace
