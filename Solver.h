@@ -10,8 +10,8 @@
 class Solver
 {
 public:
-    using Id           = std::string;
-    using IdList       = std::vector<Id>;
+    using Id = std::string;
+    using IdList = std::vector<Id>;
 
     struct TypeInfo
     {
@@ -19,7 +19,7 @@ public:
         std::string title;
         std::string preposition;
     };
-    using TypeInfoList = std::map<TypeInfo>;
+    using TypeInfoList = std::map<std::string, TypeInfo>;
 
     struct CardInfo
     {
@@ -30,9 +30,9 @@ public:
 
     struct Rules
     {
-        std::string     id;
-        TypeInfoList    types;  // Types by ID
-        CardInfoList    cards;  // Cards by ID
+        std::string  id;
+        TypeInfoList types;     // Types by ID
+        CardInfoList cards;     // Cards by ID
     };
 
     // Constructor
@@ -55,31 +55,31 @@ public:
 
     //! Stores the state of the solver in a json object
     nlohmann::json toJson() const;
-    
+
     //! Returns latest discoveries
     std::vector<std::string> discoveries() const { return discoveriesLog_; }
 
     // Validates a list of player IDs
-    bool PlayersAreValid(IdList const & playerIds) const;
+    bool playersAreValid(IdList const & playerIds) const;
 
     // Validates a player ID
-    bool PlayerIsValid(Id const & playerId) const;
+    bool playerIsValid(Id const & playerId) const;
 
     // Validates a list of card IDs
-    bool CardsAreValid(IdList const & cardIds) const;
+    bool cardsAreValid(IdList const & cardIds) const;
 
     // Validates a card ID
-    bool CardIsValid(Id const & cardId) const;
+    bool cardIsValid(Id const & cardId) const;
 
     // Validates a type ID
-    bool Solver::TypeIsValid(Id const & typeId) const;
+    bool typeIsValid(Id const & typeId) const;
 
     static char const * const ANSWER_PLAYER_ID;   //<! Player id of the answer
 
 private:
     struct Player
     {
-        IdList cards; // List of IDs of cards that the player might be holding
+        IdList         cards; // List of IDs of cards that the player might be holding
 
         void           remove(Id const & cardId);
         bool           mightHold(Id const & cardId) const;
@@ -88,21 +88,21 @@ private:
 
     struct Card
     {
-        IdList holders; // List of IDs of players that might be holding this card
-        CardInfo info;
+        IdList         holders; // List of IDs of players that might be holding this card
+        CardInfo       info;
 
-        void           assignHolder(Id const & playerId);
-        void           removeHolder(Id const & playerId);
+        void           remove(Id const & playerId);
         bool           mightBeHeldBy(Id const & playerId) const;
+        bool           isHeldBy(Id const & playerId) const;
         nlohmann::json toJson() const;
     };
 
     struct Suggestion
     {
-        int    id;
-        Id     player;
-        IdList cards;
-        IdList showed; // Value depends on the rules
+        int            id;
+        Id             player;
+        IdList         cards;
+        IdList         showed; // Value depends on the rules
         nlohmann::json toJson() const;
     };
 
@@ -111,7 +111,7 @@ private:
     using PlayerList     = std::map<Id, Player>;
     using CardList       = std::map<Id, Card>;
     using SuggestionList = std::vector<Suggestion>;
-    using FactList = std::map<Fact, bool>;
+    using FactList       = std::map<Fact, bool>;
 
     void deduce(Suggestion const & suggestion, bool & changed);
     void deduce(Id const & playerId, IdList const & cardIds, bool & changed);
@@ -128,7 +128,7 @@ private:
     bool cardIsType(Id const & cardId, Id const & type) const;
 
     void addDiscoveredCardHolders();
-    void addDiscovery(Id const & playerId, Id const & cardId, std::string const & reason, bool has);
+    void addDiscovery(Id const & playerId, Id const & cardId, std::string const & reason, bool holds);
 
     std::string rulesId_;
     PlayerList players_;            // List of all the players by id

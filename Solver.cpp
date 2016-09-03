@@ -34,9 +34,9 @@ json toJson(std::vector<T> const & v)
 char const * const Solver::ANSWER_PLAYER_ID = "ANSWER";
 
 Solver::Solver(Rules const & rules, IdList const & playerIds)
-	: rulesId_(rules.id)
+    : rulesId_(rules.id)
 {
-	assert(rules.id == "classic" || rules.id == "master");
+    assert(rules.id == "classic" || rules.id == "master");
 
     std::vector<Id> cardIds;
 
@@ -47,6 +47,7 @@ Solver::Solver(Rules const & rules, IdList const & playerIds)
         cardIds.push_back(id);
         cards_[id].holders = playerIds;
         cards_[id].holders.push_back(ANSWER_PLAYER_ID);
+        cards_[id].info = c.second;
     }
 
     for (auto const & p : playerIds)
@@ -61,7 +62,7 @@ Solver::Solver(Rules const & rules, IdList const & playerIds)
 void Solver::hand(Id const & playerId, IdList const & cardsIds)
 {
     discoveriesLog_.clear();
-    bool changed    = false;
+    bool changed = false;
 
     deduce(playerId, cardsIds, changed);
     makeOtherDeductions(changed);
@@ -110,46 +111,46 @@ json Solver::toJson() const
     return j;
 }
 
-bool Solver::PlayersAreValid(IdList const & playerIds) const
+bool Solver::playersAreValid(IdList const & playerIds) const
 {
     for (auto const & p : playerIds)
     {
-        if (!PlayerIsValid(p))
+        if (!playerIsValid(p))
             return false;
     }
     return true;
 }
 
-bool Solver::PlayerIsValid(Id const & playerId) const
+bool Solver::playerIsValid(Id const & playerId) const
 {
     return playerId != ANSWER_PLAYER_ID && players_.find(playerId) != players_.end();
 }
 
-bool Solver::CardsAreValid(IdList const & cardIds) const
+bool Solver::cardsAreValid(IdList const & cardIds) const
 {
     for (auto const & c : cardIds)
     {
-        if (!CardIsValid(c))
+        if (!cardIsValid(c))
             return false;
     }
     return true;
 }
 
-bool Solver::CardIsValid(Id const & cardId) const
+bool Solver::cardIsValid(Id const & cardId) const
 {
     return cards_.find(cardId) != cards_.end();
 }
 
-bool Solver::TypeIsValid(Id const & typeId) const
+bool Solver::typeIsValid(Id const & typeId) const
 {
-    return cards_.find(typeId) != types_.end();
+    return types_.find(typeId) != types_.end();
 }
 
 void Solver::deduce(Suggestion const & suggestion, bool & changed)
 {
     int id = suggestion.id;
-    Id const & suggester = suggestion.player;
-    IdList const & cards = suggestion.cards;
+    Id const & suggester  = suggestion.player;
+    IdList const & cards  = suggestion.cards;
     IdList const & showed = suggestion.showed;
     if (rulesId_ == "master")
     {
@@ -160,7 +161,7 @@ void Solver::deduce(Suggestion const & suggestion, bool & changed)
 
         for (auto const & p : players_)
         {
-            Id const & playerId = p.first;
+            Id const & playerId   = p.first;
             Player const & player = p.second;
 
             // If the player showed a card ...
@@ -174,21 +175,19 @@ void Solver::deduce(Suggestion const & suggestion, bool & changed)
                     if (player.mightHold(c))
                     {
                         ++mightHoldCount;
-                    }
-                    else
-                    {
-                        if (mustHold.empty())
+                        if (mightHoldCount == 1)
                             mustHold = c;   // Assuming none of the others are held
                         else
                             break;          // Optimization
                     }
                 }
-                if (mightHoldCount == cards.size() - 1)
+                assert(mightHoldCount >= 1);
+                if (mightHoldCount == 1)
                 {
                     addDiscovery(playerId,
-                        mustHold,
-                        "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others",
-                        true);
+                                 mustHold,
+                                 "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others",
+                                 true);
                     associatePlayerWithCard(playerId, mustHold, changed);
                 }
             }
@@ -212,9 +211,9 @@ void Solver::deduce(Suggestion const & suggestion, bool & changed)
                 for (auto const & c : cards)
                 {
                     addDiscovery(playerId,
-                        c,
-                        "all three cards were shown by other players in suggestion #" + std::to_string(id),
-                        false);
+                                 c,
+                                 "all three cards were shown by other players in suggestion #" + std::to_string(id),
+                                 false);
                 }
                 disassociatePlayerWithCards(playerId, suggestion.cards, changed);
             }
@@ -258,30 +257,28 @@ void Solver::deduce(Suggestion const & suggestion, bool & changed)
             // The last player showed a card.
             {
                 // If the player does not hold all but one of cards, the player must hold the one.
-                Id const & playerId = showed[showed.size() - 1];
+                Id const & playerId   = showed[showed.size() - 1];
                 Player const & player = players_[playerId];
-                int mightHoldCount = 0;
+                int mightHoldCount    = 0;
                 Id mustHold;
                 for (auto const & c : cards)
                 {
                     if (player.mightHold(c))
                     {
                         ++mightHoldCount;
-                    }
-                    else
-                    {
-                        if (mustHold.empty())
+                        if (mightHoldCount == 1)
                             mustHold = c;   // Assuming none of the others are held
                         else
                             break;          // Optimization
                     }
                 }
-                if (mightHoldCount == cards.size() - 1)
+                assert(mightHoldCount >= 1);
+                if (mightHoldCount == 1)
                 {
                     addDiscovery(playerId,
-                        mustHold,
-                        "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others",
-                        true);
+                                 mustHold,
+                                 "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others",
+                                 true);
                     associatePlayerWithCard(playerId, mustHold, changed);
                 }
             }
@@ -337,15 +334,15 @@ void Solver::checkThatAnswerHoldsOnlyOneOfEach(bool & changed)
 {
     Player & answer = players_[ANSWER_PLAYER_ID];
 
-    // See if there are any cards that held by the answer
+    // See if there are any cards that are held by the answer
     std::map<Id, Id> held;
     for (auto const & c : cards_)
     {
         IdList const & holders = c.second.holders;
-        if (holders.size() == 1 && holders[0] == ANSWER_PLAYER_ID)
+        if (c.second.isHeldBy(ANSWER_PLAYER_ID))
         {
             Id const & cardId = c.first;
-            Id const & type = cards_[cardId].info.type;
+            Id const & type   = cards_[cardId].info.type;
             held[type] = cardId;
         }
     }
@@ -385,7 +382,7 @@ void Solver::disassociatePlayerWithCard(Id const & playerId, Id const & cardId, 
     if (player.mightHold(cardId))
     {
         player.remove(cardId);
-        cards_[cardId].removeHolder(playerId);
+        cards_[cardId].remove(playerId);
         changed = true;
     }
 }
@@ -414,33 +411,33 @@ bool Solver::cardIsType(Id const & c, Id const & type) const
     return cards_.find(c)->second.info.type == type;
 }
 
-void Solver::addDiscovery(Id const & playerId, Id const & cardId, std::string const & reason, bool has)
+void Solver::addDiscovery(Id const & playerId, Id const & cardId, std::string const & reason, bool holds)
 {
     auto fact = std::make_pair(playerId, cardId);
     auto f    = facts_.find(fact);
     if (f == facts_.end())
     {
-        std::string discovery = playerId + (has ? " holds " : " does not hold ") + cardId + ": " + reason;
+        std::string discovery = playerId + (holds ? " holds " : " does not hold ") + cardId + ": " + reason;
         discoveriesLog_.push_back(discovery);
-        facts_[fact] = has;
+        facts_[fact] = holds;
     }
     else
     {
-        assert(f->second == has);
+        assert(f->second == holds);
     }
 }
 
 void Solver::addDiscoveredCardHolders()
 {
-	for (auto & c : cards_)
-	{
-		IdList const & holders = c.second.holders;
-		if (holders.size() == 1)
-			addDiscovery(holders[0], c.first, "nobody else holds it", true);
-	}
+    for (auto & c : cards_)
+    {
+        IdList const & holders = c.second.holders;
+        if (holders.size() == 1)
+            addDiscovery(holders[0], c.first, "nobody else holds it", true);
+    }
 }
 
-void Solver::Card::removeHolder(Id const & playerId)
+void Solver::Card::remove(Id const & playerId)
 {
     holders.erase(std::remove(holders.begin(), holders.end(), playerId), holders.end());
 }
@@ -448,6 +445,11 @@ void Solver::Card::removeHolder(Id const & playerId)
 bool Solver::Card::mightBeHeldBy(Id const & playerId) const
 {
     return std::find(holders.begin(), holders.end(), playerId) != holders.end();
+}
+
+bool Solver::Card::isHeldBy(Id const & playerId) const
+{
+    return holders.size() == 1 && holders[0] == playerId;
 }
 
 json Solver::Card::toJson() const
@@ -477,8 +479,8 @@ json Solver::Player::toJson() const
 json Solver::Suggestion::toJson() const
 {
     json j;
-    j["player"]  = player;
-    j["cards"] = cards;
-    j["showed"]  = showed;
+    j["player"] = player;
+    j["cards"]  = cards;
+    j["showed"] = showed;
     return j;
 }

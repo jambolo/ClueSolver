@@ -1,31 +1,31 @@
 ["Steejo","Rhapsody","Orbital","Shenryyr", "Aavak"]
-{"hand": {"player": "Steejo", "cards":["Candlestick", "Kitchen", "Colonel Mustard"]}}
-{"suggest": {"player":"Steejo", "cards": ["Professor Plum", "Revolver", "Ballroom"], "showed" :["Orbital"]}} 
-{"show": {"player":"Orbital", "card":"Revolver"}}
-{"suggest": {"player":"Rhapsody", "cards": ["Miss Scarlet", "Revolver", "Lounge"], "showed" :["Aavak", "Shenryyr"]}} 
-{"suggest": {"player":"Shenryyr", "cards": ["Colonel Mustard", "Revolver", "Conservatory"], "showed" :["Steejo"]}} 
-{"suggest": {"player":"Orbital", "cards": ["Colonel Mustard", "Lead pipe", "Dining room"], "showed" :["Rhapsody"]}} 
-{"suggest": {"player":"Rhapsody", "cards": ["Mrs. White", "Wrench", "Hall"], "showed" :["Aavak"]}} 
-{"suggest": {"player":"Aavak", "cards": ["Mrs. White", "Rope", "Conservatory"], "showed" :["Shenryyr"]}} 
-{"suggest": {"player":"Shenryyr", "cards": ["Miss Scarlet", "Rope", "Billiard room"], "showed" :["Steejo","Orbital"]}} 
-{"suggest": {"player":"Steejo", "cards": ["Colonel Mustard", "Candlestick", "Ballroom"], "showed" :["Orbital","Rhapsody","Aavak"]}} 
-{"show": {"player":"Aavak", "card":"Ballroom"}}
-{"suggest": {"player":"Orbital", "cards": ["Professor Plum", "Knife", "Library"], "showed" :["Rhapsody"]}} 
-{"suggest": {"player":"Rhapsody", "cards": ["Miss Scarlet", "Candlestick", "Conservatory"], "showed" :["Aavak", "Shenryyr","Steejo"]}} 
-{"suggest": {"player":"Aavak", "cards": ["Miss Scarlet", "Candlestick", "Ballroom"], "showed" :["Shenryyr","Steejo"]}} 
-{"suggest": {"player":"Shenryyr", "cards": ["Mrs. Peacock", "Wrench", "Library"], "showed" :["Steejo","Orbital","Rhapsody"]}} 
-{"suggest": {"player":"Steejo", "cards": ["Colonel Mustard", "Lead pipe", "Kitchen"], "showed" :["Orbital","Rhapsody"]}} 
-{"show": {"player":"Rhapsody", "card":"Lead pipe"}}
-{"suggest": {"player":"Orbital", "cards": ["Colonel Mustard", "Wrench", "Dining room"], "showed" :["Rhapsody","Aavak"]}} 
-{"suggest": {"player":"Rhapsody", "cards": ["Colonel Mustard", "Revolver", "Ballroom"], "showed" :["Aavak"]}} 
-{"suggest": {"player":"Aavak", "cards": ["Miss Scarlet", "Knife", "Billiard room"], "showed" :["Shenryyr","Steejo","Orbital"]}} 
-{"suggest": {"player":"Shenryyr", "cards": ["Miss Scarlet", "Candlestick", "Study"], "showed" :["Steejo"]}} 
-{"suggest": {"player":"Steejo", "cards": ["Professor Plum", "Candlestick", "Study"], "showed" :["Orbital"]}} 
-{"show": {"player":"Orbital", "card":"Study"}}
-{"suggest": {"player":"Orbital", "cards": ["Miss Scarlet", "Wrench", "Kitchen"], "showed" :["Rhapsody", "Aavak", "Shenryyr","Steejo"]}} 
-{"suggest": {"player":"Rhapsody", "cards": ["Miss Scarlet", "Wrench", "Conservatory"], "showed" :[]}} 
-{"suggest": {"player":"Aavak", "cards": ["Miss Scarlet", "Wrench", "Ballroom"], "showed" :[]}} 
-{"suggest": {"player":"Shenryyr", "cards": ["Miss Scarlet", "Wrench", "Hall"], "showed" :["Steejo","Orbital","Rhapsody", "Aavak"]}} 
-{"suggest": {"player":"Steejo", "cards": ["Colonel Mustard", "Knife", "Hall"], "showed" :["Orbital","Rhapsody"]}} 
-{"show": {"player":"Rhapsody", "card":"Knife"}}
-{"suggest": {"player":"Orbital", "cards": ["Miss Scarlet", "Revolver", "Library"], "showed" :[]}} 
+{"hand": {"player": "Steejo", "cards":["candlestick", "kitchen", "mustard"]}}
+{"suggest": {"player":"Steejo", "cards": ["plum", "revolver", "ballroom"], "showed" :["Orbital"]}} 
+{"show": {"player":"Orbital", "card":"revolver"}}
+{"suggest": {"player":"Rhapsody", "cards": ["scarlet", "revolver", "lounge"], "showed" :["Aavak", "Shenryyr"]}} 
+{"suggest": {"player":"Shenryyr", "cards": ["mustard", "revolver", "conservatory"], "showed" :["Steejo"]}} 
+{"suggest": {"player":"Orbital", "cards": ["mustard", "pipe", "dining"], "showed" :["Rhapsody"]}} 
+{"suggest": {"player":"Rhapsody", "cards": ["white", "wrench", "hall"], "showed" :["Aavak"]}} 
+{"suggest": {"player":"Aavak", "cards": ["white", "rope", "conservatory"], "showed" :["Shenryyr"]}} 
+{"suggest": {"player":"Shenryyr", "cards": ["scarlet", "rope", "billiard"], "showed" :["Steejo","Orbital"]}} 
+{"suggest": {"player":"Steejo", "cards": ["mustard", "candlestick", "ballroom"], "showed" :["Orbital","Rhapsody","Aavak"]}} 
+{"show": {"player":"Aavak", "card":"ballroom"}}
+{"suggest": {"player":"Orbital", "cards": ["plum", "knife", "library"], "showed" :["Rhapsody"]}} 
+{"suggest": {"player":"Rhapsody", "cards": ["scarlet", "candlestick", "conservatory"], "showed" :["Aavak", "Shenryyr","Steejo"]}} 
+{"suggest": {"player":"Aavak", "cards": ["scarlet", "candlestick", "ballroom"], "showed" :["Shenryyr","Steejo"]}} 
+{"suggest": {"player":"Shenryyr", "cards": ["peacock", "wrench", "library"], "showed" :["Steejo","Orbital","Rhapsody"]}} 
+{"suggest": {"player":"Steejo", "cards": ["mustard", "pipe", "kitchen"], "showed" :["Orbital","Rhapsody"]}} 
+{"show": {"player":"Rhapsody", "card":"pipe"}}
+{"suggest": {"player":"Orbital", "cards": ["mustard", "wrench", "dining"], "showed" :["Rhapsody","Aavak"]}} 
+{"suggest": {"player":"Rhapsody", "cards": ["mustard", "revolver", "ballroom"], "showed" :["Aavak"]}} 
+{"suggest": {"player":"Aavak", "cards": ["scarlet", "knife", "billiard"], "showed" :["Shenryyr","Steejo","Orbital"]}} 
+{"suggest": {"player":"Shenryyr", "cards": ["scarlet", "candlestick", "study"], "showed" :["Steejo"]}} 
+{"suggest": {"player":"Steejo", "cards": ["plum", "candlestick", "study"], "showed" :["Orbital"]}} 
+{"show": {"player":"Orbital", "card":"study"}}
+{"suggest": {"player":"Orbital", "cards": ["scarlet", "wrench", "kitchen"], "showed" :["Rhapsody", "Aavak", "Shenryyr","Steejo"]}} 
+{"suggest": {"player":"Rhapsody", "cards": ["scarlet", "wrench", "conservatory"], "showed" :[]}} 
+{"suggest": {"player":"Aavak", "cards": ["scarlet", "wrench", "ballroom"], "showed" :[]}} 
+{"suggest": {"player":"Shenryyr", "cards": ["scarlet", "wrench", "hall"], "showed" :["Steejo","Orbital","Rhapsody", "Aavak"]}} 
+{"suggest": {"player":"Steejo", "cards": ["mustard", "knife", "hall"], "showed" :["Orbital","Rhapsody"]}} 
+{"show": {"player":"Rhapsody", "card":"knife"}}
+{"suggest": {"player":"Orbital", "cards": ["scarlet", "revolver", "library"], "showed" :[]}} 
