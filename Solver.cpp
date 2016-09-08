@@ -50,6 +50,8 @@ Solver::Solver(Rules const & rules, IdList const & playerIds)
         cards_[id].info = c.second;
     }
 
+    types_ = rules.types;
+
     for (auto const & p : playerIds)
     {
         assert(p != ANSWER_PLAYER_ID);
@@ -334,6 +336,7 @@ void Solver::deduceWithMasterRules(Suggestion const &suggestion, bool & changed)
 
 bool Solver::makeOtherDeductions(bool changed)
 {
+    addCardHoldersToDiscoveries();
     checkThatAnswerHoldsOnlyOneOfEach(changed);
 
     // While anything has changed, then re-apply all the suggestions
@@ -344,9 +347,10 @@ bool Solver::makeOtherDeductions(bool changed)
         {
             deduce(s, changed);
         }
+        addCardHoldersToDiscoveries();
         checkThatAnswerHoldsOnlyOneOfEach(changed);
     }
-    addDiscoveredCardHolders();
+    addCardHoldersToDiscoveries();
     return changed;
 }
 
@@ -440,7 +444,11 @@ void Solver::addDiscovery(Id const & playerId, Id const & cardId, bool holds, st
         facts_[fact] = holds;
         if (!reason.empty())
         {
-            std::string discovery = playerId + (holds ? " holds " : " does not hold ") + cards_[cardId].info.name + ": " + reason;
+            CardInfo const & cardInfo = cards_[cardId].info;
+            TypeInfo const & typeinfo = types_[cardInfo.type];
+            std::string discovery = playerId + (holds ? " holds " : " does not hold ") +
+                typeinfo.article + cardInfo.name +
+                ": " + reason;
             discoveriesLog_.push_back(discovery);
         }
     }
@@ -450,7 +458,7 @@ void Solver::addDiscovery(Id const & playerId, Id const & cardId, bool holds, st
     }
 }
 
-void Solver::addDiscoveredCardHolders()
+void Solver::addCardHoldersToDiscoveries()
 {
     for (auto & c : cards_)
     {

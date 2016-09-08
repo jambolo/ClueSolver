@@ -18,9 +18,9 @@ void listCards(std::ostream &               out,
 
 Solver::TypeInfoList s_types =
 {
-    { "suspect",    { "suspect", "Suspects", ""            } },
-    { "weapon",     { "weapon",  "Weapons",  "with the"    } },
-    { "room",       { "room",    "Rooms",    "in the"      } }
+    { "suspect",    { "suspect", "Suspects", "",      ""     } },
+    { "weapon",     { "weapon",  "Weapons",  "with ", "the " } },
+    { "room",       { "room",    "Rooms",    "in ",   "the " } }
 };
 
 Solver::CardInfoList s_cards =
@@ -62,7 +62,7 @@ void outputSuggestion(std::ostream & out,
     for (auto const & c : cards)
     {
         Solver::CardInfo const & cardInfo = s_cards[c];
-        out << " " << s_types[cardInfo.type].preposition << cardInfo.name;
+        out << " " << s_types[cardInfo.type].preposition << s_types[cardInfo.type].article << cardInfo.name;
     }
 
     out << " ==> ";
@@ -83,16 +83,17 @@ void outputSuggestion(std::ostream & out,
 
 void outputShow(std::ostream & out, Solver::Id const & player, Solver::Id const & card)
 {
-    out << "---- " << player << " showed " << s_cards[card].name << std::endl;
+    Solver::CardInfo const & cardInfo = s_cards[card];
+    out << "---- " << player << " showed " << s_types[cardInfo.type].article << s_cards[card].name << std::endl;
 }
 
 void outputHand(std::ostream & out, Solver::Id const & player, Solver::IdList const & cards)
 {
-    out << "**** " << player << " has the hand: ";
+    out << "**** " << player << " has this hand: ";
     out << s_cards[cards[0]].name;
     for (size_t i = 1; i < cards.size(); ++i)
     {
-        out << ", " << s_cards[cards[0]].name;
+        out << ", " << s_cards[cards[i]].name;
     }
     out << std::endl;
 }
@@ -269,9 +270,9 @@ namespace
 {
 //    {
 //        "types" : [
-//            { "id" : "suspect", "name" : "Suspect", "preposition" : ""      },
-//            { "id" : "weapon",  "name" : "Weapon",  "preposition" : "with the" },
-//            { "id" : "room",    "name" : "Room",    "preposition" : "in the" }
+//            { "id" : "suspect", "name" : "suspect",  "title" : "Suspects", "article" : "",     "preposition" : ""      },
+//            { "id" : "weapon",  "name" : "weapon",   "title" : "Weapons",  "article" : "the ", "preposition" : "with " },
+//            { "id" : "room",    "name" : "room",     "title" : "Rooms",    "article" : "the ",  preposition" : "in "   }
 //        ]
 // }
 //    {
@@ -300,10 +301,16 @@ bool loadConfiguration(char const * name)
         json jtypes = j["types"];
         for (auto const & a : jtypes)
         {
-            if (a.find("id") == a.end() || a.find("name") == a.end() || a.find("preposition") == a.end())
+            if (a.find("id") == a.end() ||
+                a.find("name") == a.end() ||
+                a.find("title") == a.end() ||
+                a.find("article") == a.end() ||
+                a.find("preposition") == a.end())
+            {
                 throw std::domain_error("Invalid card type, missing information.");
+            }
 
-            Solver::TypeInfo type = { a["name"], a["preposition"] };
+            Solver::TypeInfo type = { a["name"], a["title"], a["article"], a["preposition"] };
             s_types[a["id"]] = type;
         }
 
@@ -332,11 +339,17 @@ void listCards(std::ostream &               out,
                Solver::CardInfoList const & cards)
 {
     out << typeInfo.find(typeId)->second.title << ": ";
+    bool first = true;
     for (auto const & c : cards)
     {
         if (c.second.type == typeId)
         {
-            out << "'" << c.second.name << "' ";
+            if (!first)
+            {
+                out << ", ";
+            }
+            out << c.second.name;
+            first = false;
         }
     }
     out << std::endl;
@@ -345,9 +358,15 @@ void listCards(std::ostream &               out,
 void listTypes(std::ostream & out, Solver::TypeInfoList const & types)
 {
     out << "Types: ";
+    bool first = true;
     for (auto const & t : types)
     {
-        out << '\'' << t.first << "' ";
+        if (!first)
+        {
+            out << ", ";
+        }
+        out << t.second.name;
+        first = false;
     }
     out << std::endl;
 }

@@ -18,6 +18,7 @@ public:
         std::string name;
         std::string title;
         std::string preposition;
+        std::string article;
     };
     using TypeInfoList = std::map<std::string, TypeInfo>;
 
@@ -129,7 +130,7 @@ private:
 
     bool cardIsType(Id const & cardId, Id const & type) const;
 
-    void addDiscoveredCardHolders();
+    void addCardHoldersToDiscoveries();
     void addDiscovery(Id const & playerId, Id const & cardId, bool holds, std::string const & reason = std::string());
 
     std::string rulesId_;
