@@ -148,159 +148,32 @@ bool Solver::typeIsValid(Id const & typeId) const
 
 void Solver::deduce(Suggestion const & suggestion, bool & changed)
 {
-    int id = suggestion.id;
-    Id const & suggester  = suggestion.player;
-    IdList const & cards  = suggestion.cards;
-    IdList const & showed = suggestion.showed;
     if (rulesId_ == "master")
     {
-        // You can deduce from a suggestion that:
-        //		If a player shows a card but does not all but one of the suggested cards, the player must hold the one.
-        //		If a player (other than the answer and suggester) does not show a card, the player has none of the suggested cards.
-        //		If all suggested cards are shown, then the answer and the suggester hold none of the suggested cards.
-
-        for (auto const & p : players_)
-        {
-            Id const & playerId   = p.first;
-            Player const & player = p.second;
-
-            // If the player showed a card ...
-            if (std::find(showed.begin(), showed.end(), playerId) != showed.end())
-            {
-                // ..., then if the player does not hold all but one of the cards, the player must hold the one.
-                int mightHoldCount = 0;
-                Id mustHold;
-                for (auto const & c : cards)
-                {
-                    if (player.mightHold(c))
-                    {
-                        ++mightHoldCount;
-                        if (mightHoldCount == 1)
-                            mustHold = c;   // Assuming none of the others are held
-                        else
-                            break;          // Optimization
-                    }
-                }
-                assert(mightHoldCount >= 1);
-                if (mightHoldCount == 1)
-                {
-                    addDiscovery(playerId,
-                                 mustHold,
-                                 "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others",
-                                 true);
-                    associatePlayerWithCard(playerId, mustHold, changed);
-                }
-            }
-
-            // Otherwise, if the player is other than the answer and suggester ...
-            else if (playerId != ANSWER_PLAYER_ID && playerId != suggester)
-            {
-                // ... then they don't hold any of them.
-                for (auto const & c : cards)
-                {
-                    addDiscovery(playerId, c, "did not show a card in suggestion #" + std::to_string(id), false);
-                }
-                disassociatePlayerWithCards(playerId, suggestion.cards, changed);
-            }
-
-            // Otherwise, if all three cards were shown ...
-            else if (showed.size() == 3)
-            {
-                // ... then players that don't show cards don't hold them.
-                // ... then they don't hold any of them.
-                for (auto const & c : cards)
-                {
-                    addDiscovery(playerId,
-                                 c,
-                                 "all three cards were shown by other players in suggestion #" + std::to_string(id),
-                                 false);
-                }
-                disassociatePlayerWithCards(playerId, suggestion.cards, changed);
-            }
-        }
+        deduceWithMasterRules(suggestion, changed);
     }
     else
     {
-        // You can deduce from a suggestion that:
-        //		If nobody showed a card, then none of the players (except possibly the suggester or the answer) have the cards.
-        //		Only the last player in the showed list might hold any of the suggested cards.
-        //		If the player that showed a card does not hold all but one of the cards, the player must hold the one.
-
-        if (showed.empty())
-        {
-            for (auto const & p : players_)
-            {
-                Id const & playerId = p.first;
-                if (playerId != ANSWER_PLAYER_ID && playerId != suggester)
-                {
-                    for (auto const & c : cards)
-                    {
-                        addDiscovery(playerId, c, "did not show a card in suggestion #" + std::to_string(id), false);
-                    }
-                    disassociatePlayerWithCards(playerId, suggestion.cards, changed);
-                }
-            }
-        }
-        else
-        {
-            // All but the last player have none of the cards
-            for (int i = 0; i < showed.size() - 1; ++i)
-            {
-                Id const & playerId = showed[i];
-                for (auto const & c : cards)
-                {
-                    addDiscovery(playerId, c, "did not show a card in suggestion #" + std::to_string(id), false);
-                }
-                disassociatePlayerWithCards(playerId, suggestion.cards, changed);
-            }
-
-            // The last player showed a card.
-            {
-                // If the player does not hold all but one of cards, the player must hold the one.
-                Id const & playerId   = showed[showed.size() - 1];
-                Player const & player = players_[playerId];
-                int mightHoldCount    = 0;
-                Id mustHold;
-                for (auto const & c : cards)
-                {
-                    if (player.mightHold(c))
-                    {
-                        ++mightHoldCount;
-                        if (mightHoldCount == 1)
-                            mustHold = c;   // Assuming none of the others are held
-                        else
-                            break;          // Optimization
-                    }
-                }
-                assert(mightHoldCount >= 1);
-                if (mightHoldCount == 1)
-                {
-                    addDiscovery(playerId,
-                                 mustHold,
-                                 "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others",
-                                 true);
-                    associatePlayerWithCard(playerId, mustHold, changed);
-                }
-            }
-        }
+        deduceWithClassicRules(suggestion, changed);
     }
 }
 
-// Make deductions based on the player having these cards
+// Make deductions based on the player having exactly these cards
 void Solver::deduce(Id const & playerId, IdList const & cards, bool & changed)
 {
     Player & player = players_[playerId];
 
+    // Associate the player with every card in the list and disassociate the player with every other card.
     for (auto & c : cards_)
     {
         if (std::find(cards.begin(), cards.end(), c.first) != cards.end())
         {
-            addDiscovery(playerId, c.first, "hand", true);
+            addDiscovery(playerId, c.first, true, "hand");
             associatePlayerWithCard(playerId, c.first, changed);
         }
         else
         {
-            addDiscovery(playerId, c.first, "hand", false);
+            addDiscovery(playerId, c.first, false, "hand");
             disassociatePlayerWithCard(playerId, c.first, changed);
         }
     }
@@ -309,8 +182,154 @@ void Solver::deduce(Id const & playerId, IdList const & cards, bool & changed)
 // Make deductions based on the player having this cardId
 void Solver::deduce(Id const & playerId, Id const & cardId, bool & changed)
 {
-    addDiscovery(playerId, cardId, "revealed", true);
+    addDiscovery(playerId, cardId, true, "revealed");
     associatePlayerWithCard(playerId, cardId, changed);
+}
+
+void Solver::deduceWithClassicRules(Suggestion const &suggestion, bool & changed)
+{
+    assert(rulesId_ == "classic");
+    int id = suggestion.id;
+    Id const & suggester = suggestion.player;
+    IdList const & cards = suggestion.cards;
+    IdList const & showed = suggestion.showed;
+
+    // You can deduce from a suggestion that:
+    //		If nobody showed a card, then none of the players (except possibly the suggester or the answer) have the cards.
+    //		Only the last player in the showed list might hold any of the suggested cards.
+    //		If the player that showed a card does not hold all but one of the cards, the player must hold the one.
+
+    if (showed.empty())
+    {
+        for (auto const & p : players_)
+        {
+            Id const & playerId = p.first;
+            if (playerId != ANSWER_PLAYER_ID && playerId != suggester)
+            {
+                for (auto const & c : cards)
+                {
+                    addDiscovery(playerId, c, false, "did not show a card in suggestion #" + std::to_string(id));
+                }
+                disassociatePlayerWithCards(playerId, suggestion.cards, changed);
+            }
+        }
+    }
+    else
+    {
+        // All but the last player have none of the cards
+        for (size_t i = 0; i < showed.size() - 1; ++i)
+        {
+            Id const & playerId = showed[i];
+            for (auto const & c : cards)
+            {
+                addDiscovery(playerId, c, false, "did not show a card in suggestion #" + std::to_string(id));
+            }
+            disassociatePlayerWithCards(playerId, suggestion.cards, changed);
+        }
+
+        // The last player showed a card.
+        {
+            // If the player does not hold all but one of cards, the player must hold the one.
+            Id const & playerId = showed[showed.size() - 1];
+            Player const & player = players_[playerId];
+            int mightHoldCount = 0;
+            Id mustHold;
+            for (auto const & c : cards)
+            {
+                if (player.mightHold(c))
+                {
+                    ++mightHoldCount;
+                    if (mightHoldCount == 1)
+                        mustHold = c;   // Assuming none of the others are held
+                    else
+                        break;          // Optimization
+                }
+            }
+            assert(mightHoldCount >= 1);
+            if (mightHoldCount == 1)
+            {
+                addDiscovery(playerId,
+                    mustHold,
+                    true,
+                    "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others");
+                associatePlayerWithCard(playerId, mustHold, changed);
+            }
+        }
+    }
+}
+
+void Solver::deduceWithMasterRules(Suggestion const &suggestion, bool & changed)
+{
+    assert(rulesId_ == "master");
+    int id = suggestion.id;
+    Id const & suggester = suggestion.player;
+    IdList const & cards = suggestion.cards;
+    IdList const & showed = suggestion.showed;
+
+    // You can deduce from a suggestion that:
+    //		If a player shows a card but does not all but one of the suggested cards, the player must hold the one.
+    //		If a player (other than the answer and suggester) does not show a card, the player has none of the suggested cards.
+    //		If all suggested cards are shown, then the answer and the suggester hold none of the suggested cards.
+
+    for (auto const & p : players_)
+    {
+        Id const & playerId = p.first;
+        Player const & player = p.second;
+
+        // If the player showed a card ...
+        if (std::find(showed.begin(), showed.end(), playerId) != showed.end())
+        {
+            // ..., then if the player does not hold all but one of the cards, the player must hold the one.
+            int mightHoldCount = 0;
+            Id mustHold;
+            for (auto const & c : cards)
+            {
+                if (player.mightHold(c))
+                {
+                    ++mightHoldCount;
+                    if (mightHoldCount == 1)
+                        mustHold = c;   // Assuming none of the others are held
+                    else
+                        break;          // Optimization
+                }
+            }
+            assert(mightHoldCount >= 1);
+            if (mightHoldCount == 1)
+            {
+                addDiscovery(playerId,
+                    mustHold,
+                    true,
+                    "showed a card in suggestion #" + std::to_string(id) + ", and does not hold the others");
+                associatePlayerWithCard(playerId, mustHold, changed);
+            }
+        }
+
+        // Otherwise, if the player is other than the answer and suggester ...
+        else if (playerId != ANSWER_PLAYER_ID && playerId != suggester)
+        {
+            // ... then they don't hold any of them.
+            for (auto const & c : cards)
+            {
+                addDiscovery(playerId, c, false, "did not show a card in suggestion #" + std::to_string(id));
+            }
+            disassociatePlayerWithCards(playerId, suggestion.cards, changed);
+        }
+
+        // Otherwise, if all three cards were shown ...
+        else if (showed.size() == 3)
+        {
+            // ... then players that don't show cards don't hold them.
+            // ... then they don't hold any of them.
+            for (auto const & c : cards)
+            {
+                addDiscovery(playerId,
+                    c,
+                    false,
+                    "all three cards were shown by other players in suggestion #" + std::to_string(id));
+            }
+            disassociatePlayerWithCards(playerId, suggestion.cards, changed);
+        }
+    }
 }
 
 bool Solver::makeOtherDeductions(bool changed)
@@ -327,6 +346,7 @@ bool Solver::makeOtherDeductions(bool changed)
         }
         checkThatAnswerHoldsOnlyOneOfEach(changed);
     }
+    addDiscoveredCardHolders();
     return changed;
 }
 
@@ -355,7 +375,7 @@ void Solver::checkThatAnswerHoldsOnlyOneOfEach(bool & changed)
         {
             if (cards_[c].info.type == h.first && c != h.second)
             {
-                addDiscovery(ANSWER_PLAYER_ID, c, "ANSWER can only hold one " + h.first, false);
+                addDiscovery(ANSWER_PLAYER_ID, c, false, "ANSWER can only hold one " + h.first);
                 disassociatePlayerWithCard(ANSWER_PLAYER_ID, c, changed);
             }
         }
@@ -372,7 +392,6 @@ void Solver::associatePlayerWithCard(Id const & playerId, Id const & cardId, boo
     }
 
     disassociateOtherPlayersWithCard(playerId, cardId, changed);
-    addDiscoveredCardHolders();
     changed = true;
 }
 
@@ -384,6 +403,7 @@ void Solver::disassociatePlayerWithCard(Id const & playerId, Id const & cardId, 
         player.remove(cardId);
         cards_[cardId].remove(playerId);
         changed = true;
+        addDiscovery(playerId, cardId, false);  // Add this discovery, but don't log it 
     }
 }
 
@@ -411,15 +431,18 @@ bool Solver::cardIsType(Id const & c, Id const & type) const
     return cards_.find(c)->second.info.type == type;
 }
 
-void Solver::addDiscovery(Id const & playerId, Id const & cardId, std::string const & reason, bool holds)
+void Solver::addDiscovery(Id const & playerId, Id const & cardId, bool holds, std::string const & reason /*= std::string()*/)
 {
     auto fact = std::make_pair(playerId, cardId);
     auto f    = facts_.find(fact);
     if (f == facts_.end())
     {
-        std::string discovery = playerId + (holds ? " holds " : " does not hold ") + cardId + ": " + reason;
-        discoveriesLog_.push_back(discovery);
         facts_[fact] = holds;
+        if (!reason.empty())
+        {
+            std::string discovery = playerId + (holds ? " holds " : " does not hold ") + cards_[cardId].info.name + ": " + reason;
+            discoveriesLog_.push_back(discovery);
+        }
     }
     else
     {
@@ -433,7 +456,7 @@ void Solver::addDiscoveredCardHolders()
     {
         IdList const & holders = c.second.holders;
         if (holders.size() == 1)
-            addDiscovery(holders[0], c.first, "nobody else holds it", true);
+            addDiscovery(holders[0], c.first, true, "nobody else holds it");
     }
 }
 

@@ -24,13 +24,13 @@ public:
     struct CardInfo
     {
         std::string name;
-        std::string type;
+        Id type;
     };
     using CardInfoList = std::map<std::string, CardInfo>;
 
     struct Rules
     {
-        std::string  id;
+        Id  id;
         TypeInfoList types;     // Types by ID
         CardInfoList cards;     // Cards by ID
     };
@@ -116,6 +116,8 @@ private:
     void deduce(Suggestion const & suggestion, bool & changed);
     void deduce(Id const & playerId, IdList const & cardIds, bool & changed);
     void deduce(Id const & playerId, Id const & cardId, bool & changed);
+    void deduceWithClassicRules(Suggestion const &suggestion, bool & changed);
+    void deduceWithMasterRules(Suggestion const &suggestion, bool & changed);
 
     bool makeOtherDeductions(bool changed);
     void checkThatAnswerHoldsOnlyOneOfEach(bool & changed);
@@ -128,7 +130,7 @@ private:
     bool cardIsType(Id const & cardId, Id const & type) const;
 
     void addDiscoveredCardHolders();
-    void addDiscovery(Id const & playerId, Id const & cardId, std::string const & reason, bool holds);
+    void addDiscovery(Id const & playerId, Id const & cardId, bool holds, std::string const & reason = std::string());
 
     std::string rulesId_;
     PlayerList players_;            // List of all the players by id
