@@ -247,6 +247,9 @@ bool loadConfiguration(char const * name)
         file >> j;
 
         s_rules = j["rules"];
+        s_types.clear();
+        s_cards.clear();
+
         json jtypes = j["types"];
         for (auto const & a : jtypes)
         {
