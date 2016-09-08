@@ -50,6 +50,53 @@ Solver::CardInfoList s_cards =
 
 std::string s_rules = "classic";
 std::vector<Solver::Id> s_players;
+
+void outputSuggestion(std::ostream & out,
+    int suggestionId,
+    Solver::Id const & player,
+    Solver::IdList const & cards,
+    Solver::IdList const & results)
+{
+    out << '(' << std::setw(2) << suggestionId << ") " << player << " suggested";
+
+    for (auto const & c : cards)
+    {
+        Solver::CardInfo const & cardInfo = s_cards[c];
+        out << " " << s_types[cardInfo.type].preposition << cardInfo.name;
+    }
+
+    out << " ==> ";
+    if (results.empty())
+    {
+        out << "nobody has them";
+    }
+    else
+    {
+        out << results[0];
+        for (size_t i = 1; i < results.size(); ++i)
+        {
+            out << ", " << results[i];
+        }
+    }
+    out << std::endl;
+}
+
+void outputShow(std::ostream & out, Solver::Id const & player, Solver::Id const & card)
+{
+    out << "---- " << player << " showed " << s_cards[card].name << std::endl;
+}
+
+void outputHand(std::ostream & out, Solver::Id const & player, Solver::IdList const & cards)
+{
+    out << "**** " << player << " has the hand: ";
+    out << s_cards[cards[0]].name;
+    for (size_t i = 1; i < cards.size(); ++i)
+    {
+        out << ", " << s_cards[cards[0]].name;
+    }
+    out << std::endl;
+}
+
 } // anonymous namespace
 
 int main(int argc, char ** argv)
@@ -155,7 +202,6 @@ int main(int argc, char ** argv)
 
             if (event.find("show") != event.end())
             {
-                *out << "---- " << input << std::endl;
                 auto s = event["show"];
                 Solver::Id player = s["player"];
                 if (!solver.playerIsValid(player))
@@ -163,11 +209,11 @@ int main(int argc, char ** argv)
                 Solver::Id card = s["card"];
                 if (!solver.cardIsValid(card))
                     throw std::domain_error("Invalid card");
+                outputShow(*out, player, card);
                 solver.show(player, card);
             }
             else if (event.find("suggest") != event.end())
             {
-                *out << '(' << std::setw(2) << suggestionId << ") " << input << std::endl;
                 auto s = event["suggest"];
                 Solver::Id player = s["player"];
                 if (!solver.playerIsValid(player))
@@ -178,12 +224,12 @@ int main(int argc, char ** argv)
                 Solver::IdList showed = s["showed"];
                 if (!solver.playersAreValid(showed))
                     throw std::domain_error("Invalid players");
+                outputSuggestion(*out, suggestionId, player, cards, showed);
                 solver.suggest(player, cards, showed, suggestionId);
                 ++suggestionId;
             }
             else if (event.find("hand") != event.end())
             {
-                *out << "**** " << input << std::endl;
                 auto h = event["hand"];
                 Solver::Id player    = h["player"];
                 Solver::IdList cards = h["cards"];
@@ -191,6 +237,7 @@ int main(int argc, char ** argv)
                     throw std::domain_error("Invalid player");
                 if (!solver.cardsAreValid(cards))
                     throw std::domain_error("Invalid hand");
+                outputHand(*out, player, cards);
                 solver.hand(player, cards);
             }
             else
@@ -202,7 +249,7 @@ int main(int argc, char ** argv)
                 std::vector<std::string> discoveries = solver.discoveries();
                 for (auto const & d : discoveries)
                 {
-                    *out << d << std::endl;
+                    *out << "     -> " << d << std::endl;
                 }
             }
 
