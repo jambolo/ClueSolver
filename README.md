@@ -27,7 +27,7 @@ A simple JSON array of names. For example,
 ```
 ### Events
 #### hand
-The first event should be a **hand** event if you are observing a player. The event value is an object containing a a `player` element
+The first event should be a **hand** event if you are observing a player. The event value is an object containing a `player` element
 and a `cards` array. For example,
 ```javascript
 { "hand" : { "player" : "joe", "cards" : [ "plum", ... ,"studio" ] } }
