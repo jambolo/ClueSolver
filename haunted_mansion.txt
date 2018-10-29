@@ -1,8 +1,8 @@
 {
     "rules" : “classic”,
     "types" : [
-        { "id" : “ghost”,  "name" : “ghost”,  "title" : “Ghosts”,  "preposition" : “haunted ", "" : "the " },
-        { "id" : “guest”, "name" : “guest”, "title" : “Guests”, "preposition" : "",      "article" : ""     },
+        { "id" : “ghost”,  "name" : “ghost”,  "title" : “Ghosts”,  "preposition" : “", "article" : "the " },
+        { "id" : “guest”, "name" : “guest”, "title" : “Guests”, "preposition" : "haunted ",      "article" : ""     },
         { "id" : "room",    "name" : "room",    "title" : "Rooms",    "preposition" : "in ",   "article" : "the " }
     ],
     "cards" : [
