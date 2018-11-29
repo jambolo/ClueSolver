@@ -49,14 +49,14 @@ Solver::CardInfoList s_cards =
     { "hall",         { "Hall",            "room"    } }
 };
 
-std::string s_rules = "classic";
+std::string             s_rules = "classic";
 std::vector<Solver::Id> s_players;
 
-void outputSuggestion(std::ostream & out,
-    int suggestionId,
-    Solver::Id const & player,
-    Solver::IdList const & cards,
-    Solver::IdList const & results)
+void outputSuggestion(std::ostream &         out,
+                      int                    suggestionId,
+                      Solver::Id const &     player,
+                      Solver::IdList const & cards,
+                      Solver::IdList const & results)
 {
     out << '(' << std::setw(2) << suggestionId << ") " << player << " suggested";
 
@@ -98,16 +98,15 @@ void outputHand(std::ostream & out, Solver::Id const & player, Solver::IdList co
     }
     out << std::endl;
 }
-
 } // anonymous namespace
 
 int main(int argc, char ** argv)
 {
-    char * configurationFileName = nullptr;
-    char * inputFileName         = nullptr;
-    char * outputFileName        = nullptr;
-    std::ifstream infilestream;
-    std::ofstream outfilestream;
+    char *         configurationFileName = nullptr;
+    char *         inputFileName         = nullptr;
+    char *         outputFileName        = nullptr;
+    std::ifstream  infilestream;
+    std::ofstream  outfilestream;
     std::istream * in  = &std::cin;
     std::ostream * out = &std::cout;
 
@@ -190,9 +189,9 @@ int main(int argc, char ** argv)
     *out << "players = " << json(s_players).dump() << std::endl;
     *out << std::endl;
 
-    int suggestionId    = 0;
-    Solver::Rules rules = { s_rules, s_types, s_cards };
-    Solver solver(rules, s_players);
+    int           suggestionId = 0;
+    Solver::Rules rules        = { s_rules, s_types, s_cards };
+    Solver        solver(rules, s_players);
     while (true)
     {
         std::getline(*in, input);
@@ -204,7 +203,7 @@ int main(int argc, char ** argv)
 
             if (event.find("show") != event.end())
             {
-                auto s = event["show"];
+                auto       s      = event["show"];
                 Solver::Id player = s["player"];
                 if (!solver.playerIsValid(player))
                     throw std::domain_error("Invalid player");
@@ -216,7 +215,7 @@ int main(int argc, char ** argv)
             }
             else if (event.find("suggest") != event.end())
             {
-                auto s = event["suggest"];
+                auto       s      = event["suggest"];
                 Solver::Id player = s["player"];
                 if (!solver.playerIsValid(player))
                     throw std::domain_error("Invalid player");
@@ -232,9 +231,9 @@ int main(int argc, char ** argv)
             }
             else if (event.find("hand") != event.end())
             {
-                auto h = event["hand"];
-                Solver::Id player    = h["player"];
-                Solver::IdList cards = h["cards"];
+                auto           h      = event["hand"];
+                Solver::Id     player = h["player"];
+                Solver::IdList cards  = h["cards"];
                 if (!solver.playerIsValid(player))
                     throw std::domain_error("Invalid player");
                 if (!solver.cardsAreValid(cards))
@@ -346,9 +345,7 @@ void listCards(std::ostream &               out,
         if (c.second.type == typeId)
         {
             if (!first)
-            {
                 out << ", ";
-            }
             out << c.second.name;
             first = false;
         }
@@ -363,9 +360,7 @@ void listTypes(std::ostream & out, Solver::TypeInfoList const & types)
     for (auto const & t : types)
     {
         if (!first)
-        {
             out << ", ";
-        }
         out << t.second.name;
         first = false;
     }
