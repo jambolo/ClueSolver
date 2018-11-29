@@ -19,10 +19,9 @@ option(BUILD_SHARED_LIBS "Build libraries as DLLs" FALSE)
 
 # JSON library include
 
-include_directories($(PROJECT_SOURCE_DIR)/json/src)
+include_directories($(PROJECT_SOURCE_DIR)/json/include)
 
 set(SOURCES
-    json/src/json.hpp
     main.cpp
     Solver.cpp
     Solver.h

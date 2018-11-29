@@ -1,9 +1,10 @@
 #include "Solver.h"
 
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 
 using json = nlohmann::json;
 

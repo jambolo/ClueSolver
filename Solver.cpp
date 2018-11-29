@@ -1,6 +1,6 @@
 #include "Solver.h"
 
-#include <json.hpp>
+#include <nlohmann/json.hpp>
 
 #include <algorithm>
 

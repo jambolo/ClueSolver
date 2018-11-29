@@ -2,7 +2,7 @@
 #if !defined(SOLVER_H)
 #define SOLVER_H 1
 
-#include <json.hpp>
+#include <nlohmann/json_fwd.hpp>
 #include <map>
 #include <string>
 #include <vector>
