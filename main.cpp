@@ -53,12 +53,12 @@ std::string             s_rules = "classic";
 std::vector<Solver::Id> s_players;
 
 void outputSuggestion(std::ostream &         out,
-                      int                    suggestionId,
+                      int                    id,
                       Solver::Id const &     player,
                       Solver::IdList const & cards,
                       Solver::IdList const & results)
 {
-    out << '(' << std::setw(2) << suggestionId << ") " << player << " suggested";
+    out << '(' << std::setw(2) << id << ") " << player << " suggested";
 
     for (auto const & c : cards)
     {
@@ -73,10 +73,27 @@ void outputSuggestion(std::ostream &         out,
     }
     else
     {
-        out << results[0];
-        for (size_t i = 1; i < results.size(); ++i)
+        if (s_rules == "master")
         {
-            out << ", " << results[i];
+            out << results[0];
+            for (size_t i = 1; i < results.size(); ++i)
+            {
+                out << ", " << results[i];
+            }
+            out << " showed a card";
+        }
+        else
+        {
+            if (results.size() > 1)
+            {
+                out << results[0];
+                for (size_t i = 1; i < results.size()-1; ++i)
+                {
+                    out << ", " << results[i];
+                }
+                out << " had nothing, but ";
+            }
+            out << results.back() << " showed a card";
         }
     }
     out << std::endl;
