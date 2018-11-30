@@ -16,7 +16,6 @@ public:
     //! Info associated with a card type
     struct TypeInfo
     {
-        std::string name;           //!< Name of the type (used as the id)
         std::string title;          //!< Name of the type (suitable as a title)
         std::string preposition;    //!< Preposition used in the suggestion (if any)
         std::string article;        //!< Article used with the name (if any)

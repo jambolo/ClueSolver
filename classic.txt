@@ -1,0 +1,31 @@
+{
+    "rules" : "classic",
+    "types" : [
+        { "id" : "suspect", "title" : "Suspects", "preposition" : "",      "article" : ""     },
+        { "id" : "weapon",  "title" : "Weapons",  "preposition" : "with ", "article" : "the " },
+        { "id" : "room",    "title" : "Rooms",    "preposition" : "in ",   "article" : "the " }
+    ],
+    "cards" : [
+        { "id" : "mustard",      "name" : "Colonel Mustard", "type" : "suspect" },
+        { "id" : "white",        "name" : "Mrs. White",      "type" : "suspect" },
+        { "id" : "plum",         "name" : "Professor Plum",  "type" : "suspect" },
+        { "id" : "peacock",      "name" : "Mrs. Peacock",    "type" : "suspect" },
+        { "id" : "green",        "name" : "Mr. Green",       "type" : "suspect" },
+        { "id" : "scarlet",      "name" : "Miss Scarlet",    "type" : "suspect" },
+        { "id" : "revolver",     "name" : "Revolver",        "type" : "weapon"  },
+        { "id" : "knife",        "name" : "Knife",           "type" : "weapon"  },
+        { "id" : "rope",         "name" : "Rope",            "type" : "weapon"  },
+        { "id" : "pipe",         "name" : "Lead pipe",       "type" : "weapon"  },
+        { "id" : "wrench",       "name" : "Wrench",          "type" : "weapon"  },
+        { "id" : "candlestick",  "name" : "Candlestick",     "type" : "weapon"  },
+        { "id" : "dining",       "name" : "Dining room",     "type" : "room"    },
+        { "id" : "conservatory", "name" : "Conservatory",    "type" : "room"    },
+        { "id" : "kitchen",      "name" : "Kitchen",         "type" : "room"    },
+        { "id" : "study",        "name" : "Study",           "type" : "room"    },
+        { "id" : "library",      "name" : "Library",         "type" : "room"    },
+        { "id" : "billiard",     "name" : "Billiard room",   "type" : "room"    },
+        { "id" : "lounge",       "name" : "Lounge",          "type" : "room"    },
+        { "id" : "ballroom",     "name" : "Ballroom",        "type" : "room"    },
+        { "id" : "hall",         "name" : "Hall",            "type" : "room"    }
+    ]
+}

@@ -19,9 +19,9 @@ void listCards(std::ostream &               out,
 
 Solver::TypeInfoList s_types =
 {
-    { "suspect",    { "suspect", "Suspects", "",      ""     } },
-    { "weapon",     { "weapon",  "Weapons",  "with ", "the " } },
-    { "room",       { "room",    "Rooms",    "in ",   "the " } }
+    { "suspect",    { "Suspects", "",      ""     } },
+    { "weapon",     { "Weapons",  "with ", "the " } },
+    { "room",       { "Rooms",    "in ",   "the " } }
 };
 
 Solver::CardInfoList s_cards =
@@ -317,9 +317,9 @@ namespace
 {
 //    {
 //        "types" : [
-//            { "id" : "suspect", "name" : "suspect",  "title" : "Suspects", "article" : "",     "preposition" : ""      },
-//            { "id" : "weapon",  "name" : "weapon",   "title" : "Weapons",  "article" : "the ", "preposition" : "with " },
-//            { "id" : "room",    "name" : "room",     "title" : "Rooms",    "article" : "the ",  preposition" : "in "   }
+//            { "id" : "suspect", "title" : "Suspects", "article" : "",     "preposition" : ""      },
+//            { "id" : "weapon",  "title" : "Weapons",  "article" : "the ", "preposition" : "with " },
+//            { "id" : "room",    "title" : "Rooms",    "article" : "the ",  preposition" : "in "   }
 //        ]
 // }
 //    {
@@ -349,7 +349,6 @@ bool loadConfiguration(char const * name)
         for (auto const & a : jtypes)
         {
             if (a.find("id") == a.end() ||
-                a.find("name") == a.end() ||
                 a.find("title") == a.end() ||
                 a.find("article") == a.end() ||
                 a.find("preposition") == a.end())
@@ -357,7 +356,7 @@ bool loadConfiguration(char const * name)
                 throw std::domain_error("Invalid card type, missing information.");
             }
 
-            Solver::TypeInfo type = { a["name"], a["title"], a["article"], a["preposition"] };
+            Solver::TypeInfo type = { a["title"], a["article"], a["preposition"] };
             s_types[a["id"]] = type;
         }
 
@@ -408,7 +407,7 @@ void listTypes(std::ostream & out, Solver::TypeInfoList const & types)
     {
         if (!first)
             out << ", ";
-        out << t.second.name;
+        out << t.first;
         first = false;
     }
     out << std::endl;

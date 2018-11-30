@@ -1,9 +1,9 @@
 {
     "rules" : "master",
     "types" : [
-        { "id" : "suspect", "name" : "suspect", "title" : "Suspects", "preposition" : "",      "article" : ""     },
-        { "id" : "weapon",  "name" : "weapon",  "title" : "Weapons",  "preposition" : "with ", "article" : "the " },
-        { "id" : "room",    "name" : "room",    "title" : "Rooms",    "preposition" : "in ",   "article" : "the " }
+        { "id" : "suspect", "title" : "Suspects", "preposition" : "",      "article" : ""     },
+        { "id" : "weapon",  "title" : "Weapons",  "preposition" : "with ", "article" : "the " },
+        { "id" : "room",    "title" : "Rooms",    "preposition" : "in ",   "article" : "the " }
     ],
     "cards" : [
         { "id" : "mustard",      "name" : "Colonel Mustard",   "type" : "suspect" },
