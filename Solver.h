@@ -16,7 +16,7 @@ public:
     //! Info associated with a card type
     struct TypeInfo
     {
-        std::string name;           //!< Name of the type
+        std::string name;           //!< Name of the type (used as the id)
         std::string title;          //!< Name of the type (suitable as a title)
         std::string preposition;    //!< Preposition used in the suggestion (if any)
         std::string article;        //!< Article used with the name (if any)
@@ -50,6 +50,9 @@ public:
 
     //! Processes the result of a suggestion
     void suggest(Id const & playerId, IdList const & cardIds, IdList const & showed, int id);
+
+    //! Processes the result of an accusation
+    void accuse(Id const & playerId, IdList const & cardIds, bool outcome, int id);
 
     //! Returns a list of cards that might be held by the player
     IdList mightBeHeldBy(Id const & playerId) const;
@@ -110,14 +113,28 @@ private:
         nlohmann::json toJson() const;
     };
 
+    struct Accusation
+    {
+        int id;
+        Id player;
+        IdList cards;
+        bool correct;
+        nlohmann::json toJson() const;
+    };
+
     using Fact = std::pair<std::string, Id>;
 
     using PlayerList     = std::map<Id, Player>;
     using CardList       = std::map<Id, Card>;
     using SuggestionList = std::vector<Suggestion>;
+    using AccusationList = std::vector<Accusation>;
     using FactList       = std::map<Fact, bool>;
 
+    bool mustHoldOne(Id const & playerId, IdList const & cardIds, Id & held);
+    bool mustNotHoldOne(Id const & playerId, IdList const & cardIds, Id & notHeld);
+
     void deduce(Suggestion const & suggestion, bool & changed);
+    void deduce(Accusation const & accusation, bool & changed);
     void deduce(Id const & playerId, IdList const & cardIds, bool & changed);
     void deduce(Id const & playerId, Id const & cardId, bool & changed);
     void deduceWithClassicRules(Suggestion const & suggestion, bool & changed);
@@ -135,12 +152,14 @@ private:
 
     void addCardHoldersToDiscoveries();
     void addDiscovery(Id const & playerId, Id const & cardId, bool holds, std::string const & reason = std::string());
+    void addDiscoveries(Id const & playerId, IdList const & cards, bool holds, std::string reason);
 
     std::string rulesId_;
     PlayerList players_;            // List of all the players by ID
     CardList cards_;                // List of all the cards by ID
     TypeInfoList types_;            // List of all card types by ID
     SuggestionList suggestions_;    // List of all suggestions
+    AccusationList accusations_;    // List of all accusation
     FactList facts_;
     std::vector<std::string> discoveriesLog_;
 };

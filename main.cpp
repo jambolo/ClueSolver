@@ -115,6 +115,21 @@ void outputHand(std::ostream & out, Solver::Id const & player, Solver::IdList co
     }
     out << std::endl;
 }
+
+void outputAccusation(std::ostream & out, int id, Solver::Id const & player, Solver::IdList const & cards, bool correct)
+{
+    out << '(' << std::setw(2) << id << ") " << player << " accused";
+
+    for (auto const & c : cards)
+    {
+        Solver::CardInfo const & cardInfo = s_cards[c];
+        out << " " << s_types[cardInfo.type].preposition << s_types[cardInfo.type].article << cardInfo.name;
+    }
+
+    out << " ==> " << (correct ? "correct" : "wrong");
+    out << std::endl;
+}
+
 } // anonymous namespace
 
 int main(int argc, char ** argv)
@@ -207,6 +222,7 @@ int main(int argc, char ** argv)
     *out << std::endl;
 
     int           suggestionId = 0;
+    int           accusationId = 0;
     Solver::Rules rules        = { s_rules, s_types, s_cards };
     Solver        solver(rules, s_players);
     while (true)
@@ -257,6 +273,20 @@ int main(int argc, char ** argv)
                     throw std::domain_error("Invalid hand");
                 outputHand(*out, player, cards);
                 solver.hand(player, cards);
+            }
+            else if (event.find("accuse") != event.end())
+            {
+                auto       s = event["accuse"];
+                Solver::Id player = s["player"];
+                if (!solver.playerIsValid(player))
+                    throw std::domain_error("Invalid player");
+                Solver::IdList cards = s["cards"];
+                if (!solver.cardsAreValid(cards))
+                    throw std::domain_error("Invalid cards");
+                bool correct = s["correct"];
+                outputAccusation(*out, suggestionId, player, cards, correct);
+                solver.accuse(player, cards, correct, accusationId);
+                ++accusationId;
             }
             else
             {

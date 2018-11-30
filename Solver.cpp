@@ -90,6 +90,18 @@ void Solver::suggest(Id const & playerId, IdList const & cardIds, IdList const &
     makeOtherDeductions(changed);
 }
 
+void Solver::accuse(Id const & playerId, IdList const & cardIds, bool outcome, int id)
+{
+    discoveriesLog_.clear();
+    bool changed = false;
+
+    Accusation accusation = { id, playerId, cardIds, outcome };
+    accusations_.push_back(accusation);
+
+    deduce(accusation, changed);
+    makeOtherDeductions(changed);
+}
+
 Solver::IdList Solver::mightBeHeldBy(Id const & playerId) const
 {
     assert(players_.find(playerId) != players_.end());
@@ -148,12 +160,80 @@ bool Solver::typeIsValid(Id const & typeId) const
     return types_.find(typeId) != types_.end();
 }
 
+// If the player must hold one of the cards, but we know it doesn't hold all but one, then that one must be the one that is held
+bool Solver::mustHoldOne(Id const & playerId, IdList const & cardIds, Id & held)
+{
+    int count = 0;
+    for (auto const & cardId : cardIds)
+    {
+        if (players_[playerId].mightHold(cardId))
+        {
+            if (++count > 1)
+                return false;
+            held = cardId;
+        }
+    }
+    return true;
+}
+
+// If the player must not hold one of the cards, but we know it holds all but one, then that one is the one it doesn't hold
+bool Solver::mustNotHoldOne(Id const & playerId, IdList const & cardIds, Id & notHeld)
+{
+    int count = 0;
+    for (auto const & cardId : cardIds)
+    {
+        if (!cards_[cardId].isHeldBy(playerId))
+        {
+            if (++count > 1)
+                return false;
+            notHeld = cardId;
+        }
+    }
+    return true;
+}
+
 void Solver::deduce(Suggestion const & suggestion, bool & changed)
 {
     if (rulesId_ == "master")
         deduceWithMasterRules(suggestion, changed);
     else
         deduceWithClassicRules(suggestion, changed);
+}
+
+// Make deductions based on the results of this accusation
+void Solver::deduce(Accusation const & accusation, bool & changed)
+{
+    // You can deduce from an accusation that :
+    //    The accuser does not have the cards in the accusation (assuming no suicidal intentions).
+    //    If the accusation is correct, then those are the cards (and the game is over).
+    //    If the accusation is incorrect, then
+    //      At least one of the cards is not held by the answer, but if we know that two of the cards are held by the answer,
+    //      then the third is not held
+
+    int            id      = accusation.id;
+    Id const &     accuser = accusation.player;
+    IdList const & cards   = accusation.cards;
+    bool           correct = accusation.correct;
+
+    addDiscoveries(accuser, cards, false, "made accusation #" + std::to_string(id));
+    disassociatePlayerWithCards(accuser, cards, changed);
+
+    if (correct)
+    {
+        for (auto const & card : cards)
+        {
+            associatePlayerWithCard(ANSWER_PLAYER_ID, card, changed);
+        }
+    }
+    else
+    {
+        Id mustNotHold;
+        if (mustNotHoldOne(ANSWER_PLAYER_ID, cards, mustNotHold))
+        {
+            addDiscovery(ANSWER_PLAYER_ID, mustNotHold, false, "holds the other cards in accusation #" + std::to_string(id));
+            disassociatePlayerWithCard(ANSWER_PLAYER_ID, mustNotHold, changed);
+        }
+    }
 }
 
 // Make deductions based on the player having exactly these cards
@@ -204,10 +284,7 @@ void Solver::deduceWithClassicRules(Suggestion const & suggestion, bool & change
             Id const & playerId = p.first;
             if (playerId != ANSWER_PLAYER_ID && playerId != suggester)
             {
-                for (auto const & c : cards)
-                {
-                    addDiscovery(playerId, c, false, "did not show a card in suggestion #" + std::to_string(id));
-                }
+                addDiscoveries(playerId, cards, false, "did not show a card in suggestion #" + std::to_string(id));
                 disassociatePlayerWithCards(playerId, suggestion.cards, changed);
             }
         }
@@ -342,6 +419,10 @@ bool Solver::makeOtherDeductions(bool changed)
         for (auto & s : suggestions_)
         {
             deduce(s, changed);
+        }
+        for (auto & a : accusations_)
+        {
+            deduce(a, changed);
         }
         addCardHoldersToDiscoveries();
         checkThatAnswerHoldsExactlyOneOfEach(changed);
@@ -483,6 +564,14 @@ void Solver::addDiscovery(Id const & playerId, Id const & cardId, bool holds, st
     }
 }
 
+void Solver::addDiscoveries(Id const & playerId, IdList const & cards, bool holds, std::string reason)
+{
+    for (auto const & c : cards)
+    {
+        addDiscovery(playerId, c, holds, reason);
+    }
+}
+
 void Solver::addCardHoldersToDiscoveries()
 {
     for (auto & c : cards_)
@@ -538,5 +627,14 @@ json Solver::Suggestion::toJson() const
     j["player"] = player;
     j["cards"]  = cards;
     j["showed"] = showed;
+    return j;
+}
+
+nlohmann::json Solver::Accusation::toJson() const
+{
+    json j;
+    j["player"]  = player;
+    j["cards"]   = cards;
+    j["correct"] = correct;
     return j;
 }
