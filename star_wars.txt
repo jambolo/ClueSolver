@@ -1,0 +1,38 @@
+"cards" : [
+    ""
+],
+"rooms" : [
+],
+"ships" : [
+
+{
+    "rules" : "classic",
+    "types" : [
+        { "id" : "planet", "title" : "Planets", "preposition" : "",    "article" : ""     },
+        { "id" : "ship",   "title" : "Ships",   "preposition" : "on ", "article" : "the " },
+        { "id" : "room",   "title" : "Rooms",   "preposition" : "in ", "article" : "the " }
+    ],
+    "cards" : [
+        { "id" : "alderaan",   "name" : "Alderaan",               "type" : "planet" },
+        { "id" : "bespin",     "name" : "Bespin",                 "type" : "planet" },
+        { "id" : "dagobah",    "name" : "Dagobah",                "type" : "planet" },
+        { "id" : "endor",      "name" : "Endor",                  "type" : "planet" },
+        { "id" : "tattoine",   "name" : "Tatooine,                "type" : "planet" },
+        { "id" : "yavin",      "name" : "Yavin 4",                "type" : "planet" },
+        { "id" : "laser",      "name" : "Laser Control Room",     "type" : "room"   },
+        { "id" : "overbridge", "name" : "Overbridge",             "type" : "room"   },
+        { "id" : "docking",    "name" : "Docking Bay",            "type" : "room"   },
+        { "id" : "red",        "name" : "RedControl Room",        "type" : "room"   },
+        { "id" : "war",        "name" : "War Room",               "type" : "room"   },
+        { "id" : "detention",  "name" : "Detention Block",        "type" : "room"   },
+        { "id" : "throne",     "name" : "Throne Room",            "type" : "room"   },
+        { "id" : "trash",      "name" : "Trash Compactor",        "type" : "room"   },
+        { "id" : "tractor",    "name" : "Tractor Beam Generator", "type" : "room"   },
+        { "id" : "millenium",  "name" : "Millenium Falcon",       "type" : "ship"   },
+        { "id" : "xwing",      "name" : "X Wing",                 "type" : "ship"   },
+        { "id" : "ywing",      "name" : "Y Wing",                 "type" : "ship"   },
+        { "id" : "tiefighter", "name" : "Tie Fighter",            "type" : "ship"   },
+        { "id" : "pod",        "name" : "Escape Pod",             "type" : "ship"   },
+        { "id" : "tiebomber",  "name" : "Tie Bomber",             "type" : "ship"   }
+    ]
+}
