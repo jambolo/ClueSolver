@@ -17,15 +17,14 @@ add_definitions(
 
 option(BUILD_SHARED_LIBS "Build libraries as DLLs" FALSE)
 
-# JSON library include
-
-include_directories($(PROJECT_SOURCE_DIR)/json/include)
+find_package(nlohmann_json)
 
 set(SOURCES
     main.cpp
     Solver.cpp
     Solver.h
 )
+source_group(Sources FILES ${SOURCES})
 
 add_executable(ClueSolver ${SOURCES})
-source_group(Sources FILES ${SOURCES})
+target_link_libraries(ClueSolver PRIVATE nlohmann_json::nlohmann_json)
