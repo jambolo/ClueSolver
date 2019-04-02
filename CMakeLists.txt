@@ -17,7 +17,7 @@ add_definitions(
 
 option(BUILD_SHARED_LIBS "Build libraries as DLLs" FALSE)
 
-find_package(nlohmann_json)
+find_package(nlohmann_json REQUIRED)
 
 set(SOURCES
     main.cpp
